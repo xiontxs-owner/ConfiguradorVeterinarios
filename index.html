@@ -2651,7 +2651,6 @@
 
         try {
           if (record.prueba) {
-            downloadTransferExcel(record);
             record.emailOk = false;
             record.emailSkipped = true;
           } else {
@@ -2682,20 +2681,19 @@
           extra.insertBefore(pModo, pFolio.nextSibling);
         }
         showModalStep('step-exito');
+        resetAfterTransfer();
 
         if (!record.supabaseOk) {
           showValidation(
             'error',
             'No se pudo guardar el transfer en Supabase' +
               (record.supabaseError ? ': ' + record.supabaseError : '.') +
-              (record.prueba
-                ? ' El Excel se descargó de todos modos.'
-                : ' El transfer se generó de todos modos.')
+              ' El transfer se generó de todos modos.'
           );
         } else if (record.prueba) {
           showValidation(
             'ok',
-            'Modo de Prueba: se descargó el Excel. No se envió ningún correo.'
+            'Modo de Prueba: el transfer se guardó. No se envió ningún correo.'
           );
         } else if (record.emailOk) {
           showValidation(
@@ -3397,6 +3395,37 @@
           input.value = 0;
         });
         updateTotal();
+      }
+
+      function resetAfterTransfer() {
+        if (voiceWanted || voiceListening || voiceStarting) {
+          stopVoiceDictation(false);
+        }
+        clearAll();
+        const form = document.getElementById('form-cliente');
+        if (form) form.reset();
+        document.querySelectorAll('#form-cliente .form-field.is-error').forEach(function (field) {
+          field.classList.remove('is-error');
+        });
+        const hidden = document.getElementById('cli-distribuidor');
+        if (hidden) hidden.value = '';
+        clearOtroFields();
+        setOtroPanel(false);
+        renderDistribuidores('');
+        const qrRaw = document.getElementById('qr-raw');
+        if (qrRaw) qrRaw.hidden = true;
+        const qrText = document.getElementById('qr-raw-text');
+        if (qrText) qrText.value = '';
+        const live = document.getElementById('dictado-live');
+        if (live) live.hidden = true;
+        const resumen = document.getElementById('dictado-resumen');
+        if (resumen) {
+          resumen.hidden = true;
+          resumen.textContent = '';
+        }
+        transferDraft = null;
+        pedidoSnapshot = null;
+        openAccordion('cliente');
       }
 
       var BTN_BORRAR_LABEL = 'BORRAR TODO';
