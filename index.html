@@ -1,0 +1,3708 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KANTEK · Configurador de Pedidos</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="configurador test-mode-on">
+  <header class="top-bar">
+    <div class="top-bar__side top-bar__side--left" aria-hidden="true"></div>
+    <img
+      class="top-bar-logo"
+      src="assets/kantek-logo.png"
+      alt="KANTEK"
+      width="180"
+      height="68"
+    >
+    <label class="test-mode" for="modo-prueba">
+      <input type="checkbox" id="modo-prueba" checked>
+      <span class="test-mode__switch" aria-hidden="true"></span>
+      <span class="test-mode__copy">
+        <span class="test-mode__title">Modo de Prueba</span>
+        <span class="test-mode__hint">(no envía correos)</span>
+      </span>
+    </label>
+  </header>
+
+
+  <div
+    id="aviso-file"
+    class="aviso-file"
+    hidden
+    role="alert"
+  >
+    Estás abriendo el archivo de forma local.
+    Para que el micrófono y la cámara funcionen, ábrelo a través del servidor
+    <a href="http://127.0.0.1:8765/">http://127.0.0.1:8765/</a>
+    (en la terminal: <code>python3 server.py</code>).
+  </div>
+
+  <div
+    id="validacion-msg"
+    class="validacion-msg"
+    role="status"
+    aria-live="polite"
+    title="Clic para cerrar"
+    hidden
+  ></div>
+
+  <div class="page-shell">
+    <div class="accordion" id="accordion-principal">
+    <section class="acc-box is-open" id="box-cliente" data-acc="cliente">
+      <button
+        type="button"
+        class="acc-box__toggle"
+        id="toggle-cliente"
+        aria-expanded="true"
+        aria-controls="panel-cliente"
+      >
+        <span class="acc-box__title">Datos del Cliente</span>
+        <span class="acc-box__chevron" aria-hidden="true"></span>
+      </button>
+      <div class="acc-box__panel" id="panel-cliente" role="region" aria-labelledby="toggle-cliente">
+        <div class="cliente-layout">
+          <form id="form-cliente" class="cliente-form" novalidate>
+            <div class="form-field">
+              <label for="cli-nombre">Nombre</label>
+              <input id="cli-nombre" name="nombre" type="text" autocomplete="given-name" required>
+            </div>
+            <div class="form-field">
+              <label for="cli-apellidos">Apellidos</label>
+              <input id="cli-apellidos" name="apellidos" type="text" autocomplete="family-name" required>
+            </div>
+            <div class="form-field form-field--full">
+              <label for="cli-clinica">Nombre de clínica/negocio</label>
+              <input id="cli-clinica" name="clinica" type="text" autocomplete="organization" required>
+            </div>
+            <div class="form-field form-field--full">
+              <label for="cli-domicilio">Domicilio</label>
+              <input id="cli-domicilio" name="domicilio" type="text" autocomplete="street-address" required>
+            </div>
+            <div class="form-field">
+              <label for="cli-estado">Estado</label>
+              <select id="cli-estado" name="estado" required>
+                <option value="">Selecciona un estado</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="cli-telefono">Teléfono/WhatsApp</label>
+              <input id="cli-telefono" name="telefono" type="tel" inputmode="tel" autocomplete="tel" required>
+            </div>
+            <div class="form-field form-field--full">
+              <label for="cli-email">eMail</label>
+              <input id="cli-email" name="email" type="email" autocomplete="email" required>
+            </div>
+            <input type="hidden" id="cli-distribuidor" name="distribuidorId" value="">
+            <div
+              id="distribuidores"
+              class="distribuidores"
+              hidden
+              role="group"
+              aria-label="Distribuidores del estado"
+            ></div>
+            <p id="distribuidores-nota" class="distribuidores-nota" hidden></p>
+            <div id="dist-otro" class="dist-otro" hidden>
+              <p class="distribuidores__label">Distribuidor (OTRO)</p>
+              <div class="form-field form-field--full">
+                <label for="cli-dist-todos">Elegir de todos los estados</label>
+                <select id="cli-dist-todos">
+                  <option value="">Selecciona un distribuidor</option>
+                </select>
+              </div>
+              <div class="form-field form-field--full">
+                <label for="cli-dist-libre">O escribe un nombre</label>
+                <input id="cli-dist-libre" type="text" autocomplete="off">
+              </div>
+            </div>
+            <div class="form-field form-field--full">
+              <label for="cli-vendedor">¿Qué vendedor levantó el TRANSFER?</label>
+              <input id="cli-vendedor" name="vendedor" type="text" autocomplete="name" required>
+            </div>
+            <div id="qr-raw" class="qr-raw" hidden>
+              <label for="qr-raw-text">Texto leído del QR</label>
+              <textarea id="qr-raw-text" readonly rows="4"></textarea>
+              <p class="qr-raw__hint">
+                No se pudieron separar todos los datos. Copia lo que necesites al formulario.
+              </p>
+            </div>
+          </form>
+          <button
+            type="button"
+            class="btn-qr"
+            id="btn-qr"
+            aria-label="Escanear código QR"
+          >
+            <span class="btn-qr__emoji" aria-hidden="true">📷</span>
+            <span class="btn-qr__label">Escanear QR</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="acc-box" id="box-pedido" data-acc="pedido">
+      <button
+        type="button"
+        class="acc-box__toggle"
+        id="toggle-pedido"
+        aria-expanded="false"
+        aria-controls="panel-pedido"
+      >
+        <span class="acc-box__title">Configurador de Pedido</span>
+        <span class="acc-box__chevron" aria-hidden="true"></span>
+      </button>
+      <div class="acc-box__panel" id="panel-pedido" role="region" aria-labelledby="toggle-pedido">
+    <div class="config-layout">
+    <main class="config-page">
+    <div class="page-intro">
+      <h1 class="config-title">Configurador de Pedidos</h1>
+      <p class="config-subtitle">Armado de pedidos veterinarios</p>
+    </div>
+
+    <section class="productos" aria-label="Productos disponibles">
+      <!-- KANTEK Cachorro -->
+      <article class="producto-card" data-line="cachorro">
+        <div class="producto-card__accent" aria-hidden="true"></div>
+        <h2 class="producto-nombre">KANTEK Cachorro</h2>
+        <div class="producto-card__body">
+          <div class="producto-card__media">
+            <img
+            class="producto-card__img"
+            src="assets/mockup cachorro.png"
+            alt="KANTEK Cachorro"
+            loading="lazy"
+            decoding="async"
+          >
+          </div>
+          <div class="presentaciones">
+          <div class="presentacion">
+            <div class="presentacion-meta">
+              <span class="presentacion-peso">2 kg</span>
+              <span class="presentacion-precio">$215.41</span>
+            </div>
+            <div class="qty-controls">
+              <button type="button" class="btn-qty btn-minus" tabindex="-1" aria-label="Restar cantidad">−</button>
+              <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" value="0" data-product="cachorro" data-kg="2" data-piece-kg="2" data-price="215.41" aria-label="Cantidad de bolsas KANTEK Cachorro 2 kg">
+              <button type="button" class="btn-qty btn-plus" tabindex="-1" aria-label="Sumar cantidad">+</button>
+            </div>
+          </div>
+          <div class="presentacion">
+            <div class="presentacion-meta">
+              <span class="presentacion-peso">8 kg</span>
+              <span class="presentacion-precio">$714.64</span>
+            </div>
+            <div class="qty-controls">
+              <button type="button" class="btn-qty btn-minus" tabindex="-1" aria-label="Restar cantidad">−</button>
+              <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" value="0" data-product="cachorro" data-kg="8" data-piece-kg="8" data-price="714.64" aria-label="Cantidad de bolsas KANTEK Cachorro 8 kg">
+              <button type="button" class="btn-qty btn-plus" tabindex="-1" aria-label="Sumar cantidad">+</button>
+            </div>
+          </div>
+          <div class="presentacion">
+            <div class="presentacion-meta">
+              <span class="presentacion-peso">20 kg</span>
+              <span class="presentacion-precio">$1,705.72</span>
+            </div>
+            <div class="qty-controls">
+              <button type="button" class="btn-qty btn-minus" tabindex="-1" aria-label="Restar cantidad">−</button>
+              <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" value="0" data-product="cachorro" data-kg="20" data-piece-kg="20" data-price="1705.72" aria-label="Cantidad de bolsas KANTEK Cachorro 20 kg">
+              <button type="button" class="btn-qty btn-plus" tabindex="-1" aria-label="Sumar cantidad">+</button>
+            </div>
+          </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- KANTEK Adulto -->
+      <article class="producto-card" data-line="adulto">
+        <div class="producto-card__accent" aria-hidden="true"></div>
+        <h2 class="producto-nombre">KANTEK Adulto</h2>
+        <div class="producto-card__body">
+          <div class="producto-card__media">
+            <img
+            class="producto-card__img"
+            src="assets/mockup adulto.png"
+            alt="KANTEK Adulto"
+            loading="lazy"
+            decoding="async"
+          >
+          </div>
+          <div class="presentaciones">
+          <div class="presentacion">
+            <div class="presentacion-meta">
+              <span class="presentacion-peso">2 kg</span>
+              <span class="presentacion-precio">$197.27</span>
+            </div>
+            <div class="qty-controls">
+              <button type="button" class="btn-qty btn-minus" tabindex="-1" aria-label="Restar cantidad">−</button>
+              <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" value="0" data-product="adulto" data-kg="2" data-piece-kg="2" data-price="197.27" aria-label="Cantidad de bolsas KANTEK Adulto 2 kg">
+              <button type="button" class="btn-qty btn-plus" tabindex="-1" aria-label="Sumar cantidad">+</button>
+            </div>
+          </div>
+          <div class="presentacion">
+            <div class="presentacion-meta">
+              <span class="presentacion-peso">8 kg</span>
+              <span class="presentacion-precio">$704.29</span>
+            </div>
+            <div class="qty-controls">
+              <button type="button" class="btn-qty btn-minus" tabindex="-1" aria-label="Restar cantidad">−</button>
+              <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" value="0" data-product="adulto" data-kg="8" data-piece-kg="8" data-price="704.29" aria-label="Cantidad de bolsas KANTEK Adulto 8 kg">
+              <button type="button" class="btn-qty btn-plus" tabindex="-1" aria-label="Sumar cantidad">+</button>
+            </div>
+          </div>
+          <div class="presentacion">
+            <div class="presentacion-meta">
+              <span class="presentacion-peso">20 kg</span>
+              <span class="presentacion-precio">$1,590.01</span>
+            </div>
+            <div class="qty-controls">
+              <button type="button" class="btn-qty btn-minus" tabindex="-1" aria-label="Restar cantidad">−</button>
+              <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" value="0" data-product="adulto" data-kg="20" data-piece-kg="20" data-price="1590.01" aria-label="Cantidad de bolsas KANTEK Adulto 20 kg">
+              <button type="button" class="btn-qty btn-plus" tabindex="-1" aria-label="Sumar cantidad">+</button>
+            </div>
+          </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- KANTEK Veteranos -->
+      <article class="producto-card" data-line="veteranos">
+        <div class="producto-card__accent" aria-hidden="true"></div>
+        <h2 class="producto-nombre">KANTEK Veteranos</h2>
+        <div class="producto-card__body">
+          <div class="producto-card__media">
+            <img
+            class="producto-card__img"
+            src="assets/mockup veteranos.png"
+            alt="KANTEK Veteranos"
+            loading="lazy"
+            decoding="async"
+          >
+          </div>
+          <div class="presentaciones">
+          <div class="presentacion">
+            <div class="presentacion-meta">
+              <span class="presentacion-peso">2 kg</span>
+              <span class="presentacion-precio">$261.41</span>
+            </div>
+            <div class="qty-controls">
+              <button type="button" class="btn-qty btn-minus" tabindex="-1" aria-label="Restar cantidad">−</button>
+              <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" value="0" data-product="veteranos" data-kg="2" data-piece-kg="2" data-price="261.41" aria-label="Cantidad de bolsas KANTEK Veteranos 2 kg">
+              <button type="button" class="btn-qty btn-plus" tabindex="-1" aria-label="Sumar cantidad">+</button>
+            </div>
+          </div>
+          <div class="presentacion">
+            <div class="presentacion-meta">
+              <span class="presentacion-peso">15 kg</span>
+              <span class="presentacion-precio">$1,358.48</span>
+            </div>
+            <div class="qty-controls">
+              <button type="button" class="btn-qty btn-minus" tabindex="-1" aria-label="Restar cantidad">−</button>
+              <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" value="0" data-product="veteranos" data-kg="15" data-piece-kg="15" data-price="1358.48" aria-label="Cantidad de bolsas KANTEK Veteranos 15 kg">
+              <button type="button" class="btn-qty btn-plus" tabindex="-1" aria-label="Sumar cantidad">+</button>
+            </div>
+          </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- KANTEK Adulto Razas Pequeñas -->
+      <article class="producto-card" data-line="razas-pequenas">
+        <div class="producto-card__accent" aria-hidden="true"></div>
+        <h2 class="producto-nombre">KANTEK Adulto Razas Pequeñas</h2>
+        <div class="producto-card__body">
+          <div class="producto-card__media">
+            <img
+            class="producto-card__img"
+            src="assets/mockup razas-pequenas.png"
+            alt="KANTEK Adulto Razas Pequeñas"
+            loading="lazy"
+            decoding="async"
+          >
+          </div>
+          <div class="presentaciones">
+          <div class="presentacion">
+            <div class="presentacion-meta">
+              <span class="presentacion-peso">2 kg</span>
+              <span class="presentacion-precio">$214.43</span>
+            </div>
+            <div class="qty-controls">
+              <button type="button" class="btn-qty btn-minus" tabindex="-1" aria-label="Restar cantidad">−</button>
+              <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" value="0" data-product="razas-pequenas" data-kg="2" data-piece-kg="2" data-price="214.43" aria-label="Cantidad de bolsas KANTEK Adulto Razas Pequeñas 2 kg">
+              <button type="button" class="btn-qty btn-plus" tabindex="-1" aria-label="Sumar cantidad">+</button>
+            </div>
+          </div>
+          <div class="presentacion">
+            <div class="presentacion-meta">
+              <span class="presentacion-peso">8 kg</span>
+              <span class="presentacion-precio">$720.07</span>
+            </div>
+            <div class="qty-controls">
+              <button type="button" class="btn-qty btn-minus" tabindex="-1" aria-label="Restar cantidad">−</button>
+              <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" value="0" data-product="razas-pequenas" data-kg="8" data-piece-kg="8" data-price="720.07" aria-label="Cantidad de bolsas KANTEK Adulto Razas Pequeñas 8 kg">
+              <button type="button" class="btn-qty btn-plus" tabindex="-1" aria-label="Sumar cantidad">+</button>
+            </div>
+          </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- KANTEK Activo -->
+      <article class="producto-card" data-line="activo">
+        <div class="producto-card__accent" aria-hidden="true"></div>
+        <h2 class="producto-nombre">KANTEK Activo</h2>
+        <div class="producto-card__body">
+          <div class="producto-card__media">
+            <img
+            class="producto-card__img"
+            src="assets/mockup activo.png"
+            alt="KANTEK Activo"
+            loading="lazy"
+            decoding="async"
+          >
+          </div>
+          <div class="presentaciones">
+          <div class="presentacion">
+            <div class="presentacion-meta">
+              <span class="presentacion-peso">2 kg</span>
+              <span class="presentacion-precio">$221.01</span>
+            </div>
+            <div class="qty-controls">
+              <button type="button" class="btn-qty btn-minus" tabindex="-1" aria-label="Restar cantidad">−</button>
+              <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" value="0" data-product="activo" data-kg="2" data-piece-kg="2" data-price="221.01" aria-label="Cantidad de bolsas KANTEK Activo 2 kg">
+              <button type="button" class="btn-qty btn-plus" tabindex="-1" aria-label="Sumar cantidad">+</button>
+            </div>
+          </div>
+          <div class="presentacion">
+            <div class="presentacion-meta">
+              <span class="presentacion-peso">20 kg</span>
+              <span class="presentacion-precio">$1,666.48</span>
+            </div>
+            <div class="qty-controls">
+              <button type="button" class="btn-qty btn-minus" tabindex="-1" aria-label="Restar cantidad">−</button>
+              <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" value="0" data-product="activo" data-kg="20" data-piece-kg="20" data-price="1666.48" aria-label="Cantidad de bolsas KANTEK Activo 20 kg">
+              <button type="button" class="btn-qty btn-plus" tabindex="-1" aria-label="Sumar cantidad">+</button>
+            </div>
+          </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- KANTEK Felinos -->
+      <article class="producto-card" data-line="felinos">
+        <div class="producto-card__accent" aria-hidden="true"></div>
+        <h2 class="producto-nombre">KANTEK Felinos</h2>
+        <div class="producto-card__body">
+          <div class="producto-card__media">
+            <img
+            class="producto-card__img"
+            src="assets/mockup felinos.png"
+            alt="KANTEK Felinos"
+            loading="lazy"
+            decoding="async"
+          >
+          </div>
+          <div class="presentaciones">
+          <div class="presentacion">
+            <div class="presentacion-meta">
+              <span class="presentacion-peso">1.5 kg</span>
+              <span class="presentacion-precio">$181.92</span>
+            </div>
+            <div class="qty-controls">
+              <button type="button" class="btn-qty btn-minus" tabindex="-1" aria-label="Restar cantidad">−</button>
+              <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" value="0" data-product="felinos" data-kg="1.5" data-piece-kg="1.5" data-price="181.92" aria-label="Cantidad de bolsas KANTEK Felinos 1.5 kg">
+              <button type="button" class="btn-qty btn-plus" tabindex="-1" aria-label="Sumar cantidad">+</button>
+            </div>
+          </div>
+          <div class="presentacion">
+            <div class="presentacion-meta">
+              <span class="presentacion-peso">3 kg</span>
+              <span class="presentacion-precio">$352.47</span>
+            </div>
+            <div class="qty-controls">
+              <button type="button" class="btn-qty btn-minus" tabindex="-1" aria-label="Restar cantidad">−</button>
+              <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" value="0" data-product="felinos" data-kg="3" data-piece-kg="3" data-price="352.47" aria-label="Cantidad de bolsas KANTEK Felinos 3 kg">
+              <button type="button" class="btn-qty btn-plus" tabindex="-1" aria-label="Sumar cantidad">+</button>
+            </div>
+          </div>
+          <div class="presentacion">
+            <div class="presentacion-meta">
+              <span class="presentacion-peso">6 kg</span>
+              <span class="presentacion-precio">$640.84</span>
+            </div>
+            <div class="qty-controls">
+              <button type="button" class="btn-qty btn-minus" tabindex="-1" aria-label="Restar cantidad">−</button>
+              <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" value="0" data-product="felinos" data-kg="6" data-piece-kg="6" data-price="640.84" aria-label="Cantidad de bolsas KANTEK Felinos 6 kg">
+              <button type="button" class="btn-qty btn-plus" tabindex="-1" aria-label="Sumar cantidad">+</button>
+            </div>
+          </div>
+          </div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+    <aside class="sidebar" aria-label="Resumen y acciones del pedido">
+    <div class="sidebar-section sidebar-total-block">
+      <span class="resumen-label">Total del pedido</span>
+      <span class="resumen-valor">
+        <span id="total-money" class="total-flash">$ 0.00</span><span class="total-currency"> MXN</span>
+      </span>
+      <span class="resumen-total-divider" aria-hidden="true"></span>
+      <span class="resumen-valor">
+        <span id="total-kg" class="total-flash">0</span><span class="total-kg-unit"> kg</span>
+      </span>
+    </div>
+
+    <div class="sidebar-dictar">
+      <button type="button" class="btn-dictar" id="btn-dictar" aria-pressed="false">
+        <span class="btn-dictar__emoji" aria-hidden="true">🎤</span>
+        <span class="btn-dictar__eq" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span>
+        </span>
+        <span class="btn-dictar__label" id="btn-dictar-label">Dictar pedido</span>
+      </button>
+      <div class="dictado-live" id="dictado-live" hidden>
+        <span class="dictado-live__label">Lo que escucho:</span>
+        <span class="dictado-live__text" id="dictado-live-text">…</span>
+      </div>
+      <p class="dictado-resumen" id="dictado-resumen" hidden></p>
+      <p class="dictado-bloqueado" id="dictado-bloqueado" hidden>
+        El micrófono está bloqueado. Haz clic en el candado de la barra de direcciones → Micrófono → Permitir, y luego recarga la página.
+      </p>
+    </div>
+
+    <div class="sidebar-scroll">
+    <button
+      type="button"
+      class="sidebar-panels-toggle"
+      id="sidebar-panels-toggle"
+      aria-expanded="false"
+      aria-controls="monto-status-panel"
+    >
+      <span class="sidebar-panels-toggle__box">Desglose del monto</span>
+      <span class="pallet-status__chevron" aria-hidden="true"></span>
+    </button>
+    <div
+      id="monto-status"
+      class="pallet-status is-collapsed"
+      role="region"
+      aria-label="Desglose del monto"
+    >
+      <button
+        type="button"
+        class="pallet-status__toggle"
+        id="monto-status-toggle"
+        aria-expanded="false"
+        aria-controls="monto-status-panel"
+      >
+        <span class="pallet-status__title">Desglose del monto</span>
+        <span class="pallet-status__chevron" aria-hidden="true"></span>
+      </button>
+      <div
+        id="monto-status-panel"
+        class="pallet-status__panel"
+        role="region"
+        aria-labelledby="monto-status-toggle"
+      >
+        <p class="pallet-status__body">Agrega productos para ver el desglose.</p>
+      </div>
+    </div>
+    </div>
+
+    <div class="sidebar-actions">
+      <button type="button" class="btn-cargar" id="btn-cargar">CREAR TRANSFER</button>
+      <button type="button" class="btn-borrar" id="btn-borrar">BORRAR TODO</button>
+    </div>
+    </aside>
+    </div>
+      </div>
+    </section>
+    </div>
+  </div>
+
+
+  <!-- Modal CREAR TRANSFER (pasos) -->
+  <div
+    id="modal-finalizar"
+    class="modal"
+    hidden
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="modal-finalizar-titulo"
+  >
+    <div class="modal__backdrop" data-modal-close></div>
+    <div class="modal__panel modal__panel--transfer">
+      <div id="step-pago" class="modal-step">
+        <h2 id="modal-finalizar-titulo" class="modal__title">Confirmación de pago</h2>
+        <p class="modal__text">¿El cliente paga ahora mismo?</p>
+        <div class="modal__actions">
+          <button type="button" class="btn-modal btn-modal--confirm btn-modal--lg" id="btn-paga-ahora">
+            Paga ahora mismo
+          </button>
+          <button type="button" class="btn-modal btn-modal--alt btn-modal--lg" id="btn-paga-despues">
+            Paga después
+          </button>
+          <button type="button" class="btn-modal btn-modal--cancel" data-modal-close>
+            Cancelar
+          </button>
+        </div>
+      </div>
+
+      <div id="step-confirmar" class="modal-step" hidden>
+        <h2 class="modal__title">¿Todo está correcto?</h2>
+        <div class="modal__summary" id="modal-resumen"></div>
+        <p class="modal__text">Revisa los datos antes de crear el transfer.</p>
+        <div class="modal__actions">
+          <button type="button" class="btn-modal btn-modal--confirm" id="btn-modal-si">
+            Sí, todo está correcto
+          </button>
+          <button type="button" class="btn-modal btn-modal--cancel" id="btn-modal-volver">
+            Volver
+          </button>
+        </div>
+      </div>
+
+      <div id="step-llavero" class="modal-step" hidden>
+        <h2 class="modal__title">Llaveros conmemorativos</h2>
+        <p class="modal__text modal__text--llavero" id="modal-llavero-texto">
+          En la compra de cada $2,000.00 MXN te llevas un llavero conmemorativo KANTEK.
+        </p>
+        <p class="modal__llavero-destaque" id="modal-llavero-destaque"></p>
+        <div class="modal__actions">
+          <button type="button" class="btn-modal btn-modal--confirm" id="btn-llavero-ok">
+            Continuar
+          </button>
+        </div>
+      </div>
+
+      <div id="step-exito" class="modal-step" hidden>
+        <h2 class="modal__title">Transfer creado</h2>
+        <p class="modal__text">
+          Folio:
+          <strong id="modal-folio"></strong>
+        </p>
+        <div class="modal__summary" id="modal-exito-resumen"></div>
+        <div class="modal__actions">
+          <button type="button" class="btn-modal btn-modal--confirm" data-modal-close>
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div
+    id="modal-pin"
+    class="modal"
+    hidden
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="modal-pin-titulo"
+  >
+    <div class="modal__backdrop" data-pin-close></div>
+    <div class="modal__panel modal__panel--pin">
+      <h2 id="modal-pin-titulo" class="modal__title">Modo de Prueba</h2>
+      <p class="modal__text">Ingresa la clave para activarlo.</p>
+      <form id="form-pin" class="pin-form" autocomplete="off">
+        <label class="pin-form__label" for="pin-input">Clave</label>
+        <input
+          id="pin-input"
+          class="pin-form__input"
+          type="password"
+          inputmode="numeric"
+          maxlength="8"
+          autocomplete="off"
+          spellcheck="false"
+        >
+        <p id="pin-error" class="pin-form__error" hidden>Clave incorrecta.</p>
+        <div class="modal__actions">
+          <button type="submit" class="btn-modal btn-modal--confirm">Activar</button>
+          <button type="button" class="btn-modal btn-modal--cancel" data-pin-close>
+            Cancelar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Overlay escáner QR -->
+  <div
+    id="modal-qr"
+    class="modal"
+    hidden
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="modal-qr-titulo"
+  >
+    <div class="modal__backdrop" data-qr-close></div>
+    <div class="modal__panel modal__panel--qr">
+      <h2 id="modal-qr-titulo" class="modal__title">Escanear código QR</h2>
+      <p class="modal__text">Apunta la cámara al código o sube una foto del QR.</p>
+      <div id="qr-reader" class="qr-reader"></div>
+      <p id="qr-status" class="qr-status" role="status"></p>
+      <div class="modal__actions">
+        <button type="button" class="btn-modal btn-modal--alt" id="btn-qr-file">
+          Subir imagen del QR
+        </button>
+        <button type="button" class="btn-modal btn-modal--cancel" data-qr-close>
+          Cerrar
+        </button>
+      </div>
+      <input
+        id="qr-file-input"
+        type="file"
+        accept="image/*"
+        capture="environment"
+        hidden
+      >
+    </div>
+  </div>
+
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script
+    src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"
+    onerror="this.onerror=null;this.src='https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';"
+  ></script>
+  <script
+    src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
+    onerror="this.onerror=null;this.src='https://unpkg.com/@supabase/supabase-js@2';"
+  ></script>
+  <script src="js/voiceOrder.js"></script>
+  <script src="js/supabaseClient.js"></script>
+
+  <script>
+    (function () {
+      const inputs = document.querySelectorAll('.presentaciones input[type="number"]');
+      const totalEl = document.getElementById('total-kg');
+      const totalMoneyEl = document.getElementById('total-money');
+      const btnBorrar = document.getElementById('btn-borrar');
+      const btnCargar = document.getElementById('btn-cargar');
+      const msgEl = document.getElementById('validacion-msg');
+      const modal = document.getElementById('modal-finalizar');
+      const btnModalSi = document.getElementById('btn-modal-si');
+
+      function formatNumber(value) {
+        const n = Number(value);
+        if (isNaN(n)) return '0';
+
+        const isInt = Number.isInteger(n) || Math.abs(n - Math.round(n)) < 1e-9;
+        const fixed = isInt ? String(Math.round(n)) : n.toFixed(1).replace(/\.0$/, '');
+        const parts = fixed.split('.');
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        return parts.join('.');
+      }
+
+      function formatKg(value) {
+        return formatNumber(value);
+      }
+
+      function roundMoney(value) {
+        return Math.round(Number(value) * 100) / 100;
+      }
+
+      function formatMoneyNumber(value) {
+        const n = Number(value);
+        if (isNaN(n)) return '$ 0.00';
+        const parts = n.toFixed(2).split('.');
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        return '$ ' + parts.join('.');
+      }
+
+      function formatMoney(value) {
+        return formatMoneyNumber(value) + ' MXN';
+      }
+
+      function roundKg(value) {
+        return Math.round(value * 10) / 10;
+      }
+
+      function normalizeValue(input) {
+        const n = parseInt(input.value, 10);
+        if (isNaN(n) || n < 0) {
+          input.value = 0;
+          return 0;
+        }
+        input.value = n;
+        return n;
+      }
+
+      function getTotalKg() {
+        let total = 0;
+        inputs.forEach(function (input) {
+          const qty = parseInt(input.value, 10);
+          const kg = parseFloat(input.dataset.kg);
+          if (!isNaN(qty) && qty > 0 && !isNaN(kg)) {
+            total += qty * kg;
+          }
+        });
+        return roundKg(total);
+      }
+
+      const DESCUENTO_PCT = 0.15;
+      const LLAVERO_CADA_MXN = 2000;
+      const ESTADOS_MX = [
+        'Aguascalientes',
+        'Baja California',
+        'Baja California Sur',
+        'Campeche',
+        'Chiapas',
+        'Chihuahua',
+        'Ciudad de México',
+        'Coahuila',
+        'Colima',
+        'Durango',
+        'Estado de México',
+        'Guanajuato',
+        'Guerrero',
+        'Hidalgo',
+        'Jalisco',
+        'Michoacán',
+        'Morelos',
+        'Nayarit',
+        'Nuevo León',
+        'Oaxaca',
+        'Puebla',
+        'Querétaro',
+        'Quintana Roo',
+        'San Luis Potosí',
+        'Sinaloa',
+        'Sonora',
+        'Tabasco',
+        'Tamaulipas',
+        'Tlaxcala',
+        'Veracruz',
+        'Yucatán',
+        'Zacatecas',
+      ];
+
+      const MAIL_VENTAS_KANTEK = 'ventas@kantekpremium.mx';
+      const MAIL_GERENCIA_COMERCIAL = 'gerencia.comercial@maxpro.com.mx';
+
+      const ESTADO_ALIAS = {
+        BCS: 'Baja California Sur',
+        'Ciudad de Mexico': 'Ciudad de México',
+        Queretaro: 'Querétaro',
+      };
+
+      const DISTRIBUIDORES_RAW = [
+        ['Aguascalientes', 'Diego Ismael De Luna Becerra', 'diego.ismael@live.com.mx', 'Alberto Gómez', 'ventascentro@kantekpremium.mx'],
+        ['BCS', 'Distribuidora Veterinaria Mar de Cortez', 'dvmardecortez525@gmail.com', 'KANTEK staff', '-'],
+        ['Chiapas', 'Anahí León Morales', 'colibridiprovet@gmail.com', 'KANTEK staff', '-'],
+        ['Chihuahua', 'Distribuidora Rodher', 'irodriguez@comercialrodher.com', 'Dany Torres', 'ventascdmx@kantekpremium.mx'],
+        ['Ciudad de Mexico', 'HV Aguilas', 'pedidos@supermegapet.com', 'Dany Torres', 'ventascdmx@kantekpremium.mx'],
+        ['Ciudad de Mexico', 'Moon Twin', 'alanlunacasas@gmail.com', 'Dany Torres', 'ventascdmx@kantekpremium.mx'],
+        ['Colima', 'Jose Antonio Palestino', 'jantoniopalestino@gmail.com', 'Alberto Gómez', 'ventascentro@kantekpremium.mx'],
+        ['Estado de México', 'Distribuidor y Proveedor Veterinario (DIPROVET)', 'evargas@diprovet.mx', 'Dany Torres', 'ventascdmx@kantekpremium.mx'],
+        ['Ciudad de Mexico', 'Distribuidor y Proveedor Veterinario (DIPROVET)', 'evargas@diprovet.mx', 'Dany Torres', 'ventascdmx@kantekpremium.mx'],
+        ['Hidalgo', 'Distribuidor y Proveedor Veterinario (DIPROVET)', 'evargas@diprovet.mx', 'Dany Torres', 'ventascdmx@kantekpremium.mx'],
+        ['Puebla', 'Distribuidor y Proveedor Veterinario (DIPROVET)', 'evargas@diprovet.mx', 'Dany Torres', 'ventascdmx@kantekpremium.mx'],
+        ['Morelos', 'Distribuidor y Proveedor Veterinario (DIPROVET)', 'evargas@diprovet.mx', 'Dany Torres', 'ventascdmx@kantekpremium.mx'],
+        ['Guanajuato', 'Grupo DANAMI', 'hola@danami.com.mx', 'Alberto Gómez', 'ventascentro@kantekpremium.mx'],
+        ['Hidalgo', 'Ricardo Bravo Jimenez', 'ricardoobatt21@gmail.com', 'Dany Torres', 'ventascdmx@kantekpremium.mx'],
+        ['Jalisco', 'Industrias Melder', 'bsanchez@supervet.com.mx', 'Alberto Gómez', 'ventascentro@kantekpremium.mx'],
+        ['Jalisco', 'Veterinarias MD', 'ely@maskottchen.com.mx', 'Alberto Gómez', 'ventascentro@kantekpremium.mx'],
+        ['Jalisco', 'Francisco Chavez Cornejo', 'mascotini.ps@gmail.com', 'Alberto Gómez', 'ventascentro@kantekpremium.mx'],
+        ['Jalisco', 'Croketa Mix', 'croketamix@hotmail.com', 'Alberto Gómez', 'ventascentro@kantekpremium.mx'],
+        ['Jalisco', 'Gerardo Mariscal', 'ger.mariscal@hotmail.com; dogo_vet@hotmail.com', 'Alberto Gómez', 'ventascentro@kantekpremium.mx'],
+        ['Jalisco', 'Laboratorios Expertmed', 'ventas2.expertmed@gmail.com', 'Alberto Gómez', 'ventascentro@kantekpremium.mx'],
+        ['Michoacán', 'Don Croquetero MX', 'melyduran88@gmail.com', 'Alberto Gómez', 'ventascentro@kantekpremium.mx'],
+        ['Nayarit', 'Blanca Margarita Valenzuela', 'bmvechocoburbujas@gmail.com; chocovetyest@hotmail.com', 'Alberto Gómez', 'ventascentro@kantekpremium.mx'],
+        ['Jalisco', 'Blanca Margarita Valenzuela', 'bmvechocoburbujas@gmail.com; chocovetyest@hotmail.com', 'Alberto Gómez', 'ventascentro@kantekpremium.mx'],
+        ['Nuevo León', 'Fernando Javier García Botello', 'forrajeralanacional@gmail.com', 'Alberto Gómez', 'ventascentro@kantekpremium.mx'],
+        ['San Luis Potosí', 'LOS CAPORALES, ADELFO MALDONADO MONTEALVO', 'daniel.maldonado@loscaporales.mx', 'Alberto Gómez', 'ventascentro@kantekpremium.mx'],
+        ['Puebla', 'Jorge Perez Miranda', 'proplanpuebla.jpm@gmail.com', 'Dany Torres', 'ventascdmx@kantekpremium.mx'],
+        ['Puebla', 'Renee Cardona', 'admin@santopeludo.com.mx', 'Dany Torres', 'ventascdmx@kantekpremium.mx'],
+        ['Queretaro', 'Sinergia Veterinaria Vanesa Nuñez Alcantara', 'ventas.sinervet@gmail.com', 'Dany Torres', 'ventascdmx@kantekpremium.mx'],
+        ['Querétaro', 'Ma. Carmen Gonzalez Rodriguez', 'csarecepcionmadero@gmail.com', 'Dany Torres', 'ventascdmx@kantekpremium.mx'],
+        ['Querétaro', 'DAMSA NUTRICIÓN ANIMAL', 'raedgarivan@gmail.com', 'Dany Torres', 'ventascdmx@kantekpremium.mx'],
+        ['Quintana Roo', 'Marcos Moises Martin', 'medics.salud@outlook.com', 'KANTEK staff', '-'],
+        ['San Luis Potosí', 'Jose Perez Antonio Martinez', 'ventaskantkslp@gmail.com', 'Alberto Gómez', 'ventascentro@kantekpremium.mx'],
+        ['San Luis Potosí', 'Jose Eduardo Yudiche Nuncio', 'solucionesveterinarias9@gmail.com', 'Alberto Gómez', 'ventascentro@kantekpremium.mx'],
+        ['Sinaloa', 'Ulises Ramírez Ayala', 'lcroqueteria@gmail.com', 'Alberto Gómez', 'ventascentro@kantekpremium.mx'],
+        ['Sonora', 'Insumos Nubiot', 'compras@phylax.mx', 'KANTEK staff', '-'],
+        ['Tabasco', 'Proveedora Blunmx', 'alprasur@gmail.com', 'KANTEK staff', '-'],
+        ['Chiapas', 'Proveedora Blunmx', 'alprasur@gmail.com', 'KANTEK staff', '-'],
+        ['Veracruz', 'Comercializadora RVJ', 'pitipitixalapa@gmail.com', 'KANTEK staff', '-'],
+        ['Veracruz', 'Eugenia San Roman', 'covepet.ver@gmail.com', 'KANTEK staff', '-'],
+        ['Yucatán', 'Vanessa Ponce', 'kantekmerida@gmail.com', 'KANTEK staff', '-'],
+        ['Campeche', 'Vanessa Ponce', 'kantekmerida@gmail.com', 'KANTEK staff', '-'],
+        ['Zacatecas', 'César González Gaeta', 'facturacionprofarma@hotmail.com', 'Alberto Gómez', 'ventascentro@kantekpremium.mx'],
+        ['Durango', 'César González Gaeta', 'facturacionprofarma@hotmail.com', 'Alberto Gómez', 'ventascentro@kantekpremium.mx'],
+      ];
+
+      function normalizeEstado(name) {
+        const raw = String(name || '').trim();
+        return ESTADO_ALIAS[raw] || raw;
+      }
+
+      function slugId(estado, name, index) {
+        const base = (estado + '-' + name)
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '')
+          .slice(0, 48);
+        return base + '-' + index;
+      }
+
+      const DISTRIBUIDORES_POR_ESTADO = (function () {
+        const map = {};
+        DISTRIBUIDORES_RAW.forEach(function (row, index) {
+          const estado = normalizeEstado(row[0]);
+          if (!map[estado]) map[estado] = [];
+          map[estado].push({
+            id: slugId(estado, row[1], index),
+            name: row[1],
+            email: row[2],
+            agentName: row[3],
+            agentEmail: row[4],
+            estado: estado,
+          });
+        });
+        return map;
+      })();
+
+      function getProductTotal() {
+        let total = 0;
+        inputs.forEach(function (input) {
+          const qty = parseInt(input.value, 10);
+          const price = parseFloat(input.dataset.price);
+          if (!isNaN(qty) && qty > 0 && !isNaN(price)) {
+            total += qty * price;
+          }
+        });
+        return roundMoney(total);
+      }
+
+      function getDiscountAmount(productTotal) {
+        const base =
+          productTotal == null ? getProductTotal() : Number(productTotal);
+        return roundMoney(base * DESCUENTO_PCT);
+      }
+
+      function getOrderTotal() {
+        const products = getProductTotal();
+        return roundMoney(products - getDiscountAmount(products));
+      }
+
+      function getOrderLines() {
+        const lines = [];
+        document.querySelectorAll('.producto-card').forEach(function (card) {
+          const productEl = card.querySelector('.producto-nombre');
+          const product = productEl ? productEl.textContent.trim() : '';
+          const lineKey = card.getAttribute('data-line') || '';
+          card.querySelectorAll('.presentacion').forEach(function (row) {
+            const input = row.querySelector('input[type="number"]');
+            if (!input) return;
+            const qty = parseInt(input.value, 10);
+            if (isNaN(qty) || qty <= 0) return;
+            const unitKg = parseFloat(input.dataset.kg);
+            const unitPrice = parseFloat(input.dataset.price);
+            const presentacionEl = row.querySelector('.presentacion-peso');
+            const presentacion = presentacionEl
+              ? presentacionEl.textContent.replace(/\s+/g, ' ').trim()
+              : '';
+            const lineKg = roundKg(qty * (isNaN(unitKg) ? 0 : unitKg));
+            const lineMoney = roundMoney(qty * (isNaN(unitPrice) ? 0 : unitPrice));
+            lines.push({
+              product: product,
+              lineKey: lineKey,
+              presentacion: presentacion,
+              qty: qty,
+              unitKg: isNaN(unitKg) ? 0 : unitKg,
+              unitPrice: isNaN(unitPrice) ? 0 : unitPrice,
+              kg: lineKg,
+              money: lineMoney,
+            });
+          });
+        });
+        return lines;
+      }
+
+      var validationHideTimer = null;
+
+      function clearValidationMessage() {
+        if (validationHideTimer) {
+          window.clearTimeout(validationHideTimer);
+          validationHideTimer = null;
+        }
+        if (!msgEl) return;
+        msgEl.hidden = true;
+        msgEl.textContent = '';
+        msgEl.classList.remove('validacion-msg--ok', 'validacion-msg--error');
+      }
+
+      function flashTotal() {
+        const flashEls = [
+          document.getElementById('total-money'),
+          document.getElementById('total-kg'),
+        ].filter(Boolean);
+        if (!flashEls.length) return;
+        flashEls.forEach(function (node) {
+          node.classList.remove('total-kg--flash');
+        });
+        void flashEls[0].offsetWidth;
+        flashEls.forEach(function (node) {
+          node.classList.add('total-kg--flash');
+        });
+        window.clearTimeout(flashTotal._t);
+        flashTotal._t = window.setTimeout(function () {
+          flashEls.forEach(function (node) {
+            node.classList.remove('total-kg--flash');
+          });
+        }, 280);
+      }
+
+      function el(tag, className, text) {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text != null) node.textContent = text;
+        return node;
+      }
+
+      const NOMBRES_CORTOS = {
+        cachorro: 'Cachorro',
+        adulto: 'Adulto',
+        veteranos: 'Veteranos',
+        'razas-pequenas': 'AdRazPeq',
+        activo: 'Activo',
+        felinos: 'Felinos',
+      };
+
+      function shortProductName(line) {
+        if (line && line.lineKey && NOMBRES_CORTOS[line.lineKey]) {
+          return NOMBRES_CORTOS[line.lineKey];
+        }
+        return String((line && line.product) || '')
+          .replace(/^KANTEK\s+/i, '')
+          .replace(/Adulto Razas Pequeñas/i, 'AdRazPeq')
+          .trim();
+      }
+
+      function updateMontoBreakdown() {
+        const panel = document.getElementById('monto-status-panel');
+        if (!panel) return;
+
+        const lines = getOrderLines();
+        const productTotal = getProductTotal();
+        const discount = getDiscountAmount(productTotal);
+        const orderTotal = getOrderTotal();
+
+        panel.innerHTML = '';
+        if (!lines.length) {
+          panel.appendChild(
+            el('p', 'pallet-status__body', 'Agrega productos para ver el desglose.')
+          );
+          return;
+        }
+
+        const groups = [];
+        const byKey = {};
+        lines.forEach(function (line) {
+          const key = line.lineKey || shortProductName(line);
+          if (!byKey[key]) {
+            const group = {
+              key: key,
+              name: shortProductName(line),
+              items: [],
+            };
+            byKey[key] = group;
+            groups.push(group);
+          }
+          byKey[key].items.push(line);
+        });
+
+        const wrap = el('div', 'desglose');
+        groups.forEach(function (group) {
+          const block = el('div', 'desglose-group');
+          block.setAttribute('data-line', group.key);
+          block.appendChild(el('div', 'desglose-group__name', group.name));
+          group.items.forEach(function (line) {
+            const row = el('div', 'desglose-row');
+            row.appendChild(el('span', 'desglose-row__kg', line.presentacion));
+            row.appendChild(el('span', 'desglose-row__qty', 'x ' + line.qty));
+            row.appendChild(
+              el('span', 'desglose-row__money', formatMoneyNumber(line.money))
+            );
+            block.appendChild(row);
+          });
+          wrap.appendChild(block);
+        });
+        panel.appendChild(wrap);
+
+        const list = el('ul', 'pallet-status__list desglose-totals');
+        function addItem(label, value, extraClass) {
+          const li = el(
+            'li',
+            'pallet-status__item' + (extraClass ? ' ' + extraClass : '')
+          );
+          li.appendChild(el('span', 'pallet-status__bullet', '•'));
+          const text = el('span', 'pallet-status__item-text');
+          text.appendChild(el('span', 'pallet-status__item-label', label + ' '));
+          text.appendChild(el('span', 'pallet-status__item-value', value));
+          li.appendChild(text);
+          list.appendChild(li);
+        }
+        addItem('DESCUENTO 15%:', formatMoneyNumber(discount), 'is-discount');
+        addItem('TOTAL:', formatMoneyNumber(orderTotal), 'is-total');
+        panel.appendChild(list);
+      }
+
+      function setPanelExpanded(root, toggle, expanded) {
+        if (!root) return;
+        root.classList.toggle('is-collapsed', !expanded);
+        if (toggle) toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      }
+
+      function initMontoStatusToggle() {
+        const monto = document.getElementById('monto-status');
+        const montoToggle = document.getElementById('monto-status-toggle');
+        const sharedToggle = document.getElementById('sidebar-panels-toggle');
+        const narrowMq = window.matchMedia('(max-width: 800px)');
+        const scroll = document.querySelector('.sidebar-scroll');
+
+        function setAllExpanded(expanded) {
+          setPanelExpanded(monto, montoToggle, expanded);
+          if (sharedToggle) {
+            sharedToggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+            sharedToggle.classList.toggle('is-expanded', expanded);
+          }
+          if (scroll) scroll.classList.toggle('is-expanded', expanded);
+        }
+
+        if (montoToggle) {
+          montoToggle.addEventListener('click', function () {
+            if (narrowMq.matches) {
+              setAllExpanded(false);
+              return;
+            }
+            const collapsed = monto && monto.classList.contains('is-collapsed');
+            setPanelExpanded(monto, montoToggle, collapsed);
+          });
+        }
+        if (sharedToggle) {
+          sharedToggle.addEventListener('click', function () {
+            if (!narrowMq.matches) return;
+            const collapsed = monto && monto.classList.contains('is-collapsed');
+            setAllExpanded(collapsed);
+          });
+        }
+
+        function onViewportChange() {
+          setAllExpanded(!narrowMq.matches);
+        }
+        if (typeof narrowMq.addEventListener === 'function') {
+          narrowMq.addEventListener('change', onViewportChange);
+        } else if (typeof narrowMq.addListener === 'function') {
+          narrowMq.addListener(onViewportChange);
+        }
+        onViewportChange();
+      }
+
+      function updateTotal() {
+        const total = getTotalKg();
+        const formatted = formatKg(total);
+        const money = formatMoneyNumber(getOrderTotal());
+        const kgChanged = totalEl && totalEl.textContent !== formatted;
+        const moneyChanged = totalMoneyEl && totalMoneyEl.textContent !== money;
+        if (totalEl) totalEl.textContent = formatted;
+        if (totalMoneyEl) totalMoneyEl.textContent = money;
+        if (kgChanged || moneyChanged) flashTotal();
+        updateMontoBreakdown();
+        clearValidationMessage();
+      }
+
+      var pedidoSnapshot = null;
+
+      function capturePedidoSnapshot() {
+        const lines = getOrderLines();
+        const totalKg = getTotalKg();
+        const productTotal = getProductTotal();
+        const discount = getDiscountAmount(productTotal);
+        return {
+          totalKg: totalKg,
+          productTotal: productTotal,
+          discount: discount,
+          orderTotal: getOrderTotal(),
+          lines: lines,
+        };
+      }
+
+      var transferDraft = null;
+
+      function showModalStep(stepId) {
+        if (!modal) return;
+        modal.querySelectorAll('.modal-step').forEach(function (step) {
+          step.hidden = step.id !== stepId;
+        });
+      }
+
+      function openAccordion(name) {
+        const boxes = document.querySelectorAll('.acc-box');
+        boxes.forEach(function (box) {
+          const open = box.getAttribute('data-acc') === name;
+          box.classList.toggle('is-open', open);
+          const toggle = box.querySelector('.acc-box__toggle');
+          if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+        document.body.classList.toggle('acc-open-cliente', name === 'cliente');
+        document.body.classList.toggle('acc-open-pedido', name === 'pedido');
+      }
+
+      function initAccordion() {
+        document.querySelectorAll('.acc-box__toggle').forEach(function (toggle) {
+          toggle.addEventListener('click', function () {
+            const box = toggle.closest('.acc-box');
+            if (!box) return;
+            const name = box.getAttribute('data-acc');
+            if (box.classList.contains('is-open')) return;
+            openAccordion(name);
+          });
+        });
+        openAccordion('cliente');
+      }
+
+      function getAllDistribuidores() {
+        const all = [];
+        Object.keys(DISTRIBUIDORES_POR_ESTADO).forEach(function (estado) {
+          DISTRIBUIDORES_POR_ESTADO[estado].forEach(function (dist) {
+            all.push(dist);
+          });
+        });
+        all.sort(function (a, b) {
+          const ea = (a.estado || '').localeCompare(b.estado || '', 'es');
+          if (ea !== 0) return ea;
+          return a.name.localeCompare(b.name, 'es');
+        });
+        return all;
+      }
+
+      function findDistribuidorById(id) {
+        if (!id || id === 'otro') return null;
+        const all = getAllDistribuidores();
+        for (let i = 0; i < all.length; i++) {
+          if (all[i].id === id) return all[i];
+        }
+        return null;
+      }
+
+      function fillAllDistribuidoresSelect() {
+        const select = document.getElementById('cli-dist-todos');
+        if (!select || select.getAttribute('data-filled') === '1') return;
+        getAllDistribuidores().forEach(function (dist) {
+          const opt = document.createElement('option');
+          opt.value = dist.id;
+          opt.textContent = (dist.estado ? dist.estado + ' — ' : '') + dist.name;
+          select.appendChild(opt);
+        });
+        select.setAttribute('data-filled', '1');
+      }
+
+      function setOtroPanel(open) {
+        const panel = document.getElementById('dist-otro');
+        if (panel) panel.hidden = !open;
+        if (open) fillAllDistribuidoresSelect();
+      }
+
+      function clearOtroFields() {
+        const todos = document.getElementById('cli-dist-todos');
+        const libre = document.getElementById('cli-dist-libre');
+        if (todos) todos.value = '';
+        if (libre) libre.value = '';
+      }
+
+      function selectDistributorButton(id) {
+        const wrap = document.getElementById('distribuidores');
+        if (!wrap) return;
+        wrap.querySelectorAll('.btn-distribuidor').forEach(function (btn) {
+          const selected = btn.dataset.id === id;
+          btn.classList.toggle('is-selected', selected);
+          btn.setAttribute('aria-pressed', selected ? 'true' : 'false');
+        });
+      }
+
+      function initEstadoSelect() {
+        const select = document.getElementById('cli-estado');
+        if (!select) return;
+        ESTADOS_MX.forEach(function (estado) {
+          const opt = document.createElement('option');
+          opt.value = estado;
+          opt.textContent = estado;
+          select.appendChild(opt);
+        });
+        select.addEventListener('change', function () {
+          renderDistribuidores(select.value);
+        });
+        const todos = document.getElementById('cli-dist-todos');
+        const libre = document.getElementById('cli-dist-libre');
+        if (todos) {
+          todos.addEventListener('change', function () {
+            if (!todos.value) return;
+            if (libre) libre.value = '';
+            const hidden = document.getElementById('cli-distribuidor');
+            if (hidden) hidden.value = 'otro';
+          });
+        }
+        if (libre) {
+          libre.addEventListener('input', function () {
+            if (!libre.value.trim()) return;
+            if (todos) todos.value = '';
+            const hidden = document.getElementById('cli-distribuidor');
+            if (hidden) hidden.value = 'otro';
+          });
+        }
+      }
+
+      function getDistribuidores(estado) {
+        return DISTRIBUIDORES_POR_ESTADO[normalizeEstado(estado)] || [];
+      }
+
+      function renderDistribuidores(estado) {
+        const wrap = document.getElementById('distribuidores');
+        const nota = document.getElementById('distribuidores-nota');
+        const hidden = document.getElementById('cli-distribuidor');
+        if (!wrap || !hidden) return;
+        wrap.innerHTML = '';
+        hidden.value = '';
+        clearOtroFields();
+        setOtroPanel(false);
+        const list = getDistribuidores(estado);
+        if (nota) {
+          nota.hidden = true;
+          nota.textContent = '';
+        }
+        if (!estado) {
+          wrap.hidden = true;
+          return;
+        }
+
+        wrap.hidden = false;
+        wrap.appendChild(
+          el('div', 'distribuidores__label', '¿Qué distribuidor te atiende?')
+        );
+        list.forEach(function (dist) {
+          const btn = el('button', 'btn-distribuidor', dist.name);
+          btn.type = 'button';
+          btn.setAttribute('aria-pressed', 'false');
+          btn.dataset.id = dist.id;
+          btn.addEventListener('click', function () {
+            hidden.value = dist.id;
+            clearOtroFields();
+            setOtroPanel(false);
+            selectDistributorButton(dist.id);
+          });
+          wrap.appendChild(btn);
+        });
+
+        const otro = el('button', 'btn-distribuidor btn-distribuidor--otro', 'OTRO');
+        otro.type = 'button';
+        otro.setAttribute('aria-pressed', 'false');
+        otro.dataset.id = 'otro';
+        otro.addEventListener('click', function () {
+          hidden.value = 'otro';
+          selectDistributorButton('otro');
+          setOtroPanel(true);
+        });
+        wrap.appendChild(otro);
+
+        if (list.length === 1) {
+          hidden.value = list[0].id;
+          selectDistributorButton(list[0].id);
+        } else if (list.length === 0 && nota) {
+          nota.hidden = false;
+          nota.textContent =
+            'No hay distribuidor registrado en este estado. Usa OTRO.';
+        }
+      }
+
+      /*
+       * ============================================================
+       * Escáner QR — interpretación flexible (formato expo TBD)
+       * Cuando tengamos el formato real de los QR, ajusta parseExpoQr().
+       * Formatos que ya se intentan:
+       *  - JSON { nombre, apellidos, clinica, telefono, email, domicilio, estado }
+       *  - vCard (BEGIN:VCARD ... END:VCARD)
+       *  - clave:valor / clave=valor (por línea)
+       *  - separado por comas, pipes (|) o saltos de línea
+       * ============================================================
+       */
+      var qrScanner = null;
+      var qrScanHandled = false;
+
+      function stripAccents(value) {
+        return String(value || '')
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .trim();
+      }
+
+      function matchEstadoFromText(text) {
+        const needle = stripAccents(text);
+        if (!needle) return '';
+        const aliases = {
+          cdmx: 'Ciudad de México',
+          df: 'Ciudad de México',
+          'ciudad de mexico': 'Ciudad de México',
+          bcs: 'Baja California Sur',
+          edomex: 'Estado de México',
+          'estado de mexico': 'Estado de México',
+          queretaro: 'Querétaro',
+        };
+        if (aliases[needle]) return aliases[needle];
+        for (let i = 0; i < ESTADOS_MX.length; i++) {
+          if (stripAccents(ESTADOS_MX[i]) === needle) return ESTADOS_MX[i];
+        }
+        for (let i = 0; i < ESTADOS_MX.length; i++) {
+          const name = stripAccents(ESTADOS_MX[i]);
+          if (needle.indexOf(name) !== -1 || name.indexOf(needle) !== -1) {
+            return ESTADOS_MX[i];
+          }
+        }
+        return '';
+      }
+
+      function looksLikeEmail(value) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+      }
+
+      function looksLikePhone(value) {
+        const digits = String(value || '').replace(/\D/g, '');
+        return digits.length >= 10 && digits.length <= 15;
+      }
+
+      function emptyQrFields() {
+        return {
+          nombre: '',
+          apellidos: '',
+          clinica: '',
+          domicilio: '',
+          estado: '',
+          telefono: '',
+          email: '',
+        };
+      }
+
+      function countFilledQrFields(data) {
+        return Object.keys(data).filter(function (key) {
+          return !!data[key];
+        }).length;
+      }
+
+      function applyLabeledValue(data, label, value) {
+        const key = stripAccents(label).replace(/[\s_\-]+/g, '');
+        const val = String(value || '').trim();
+        if (!val) return;
+        if (
+          key === 'nombre' ||
+          key === 'name' ||
+          key === 'firstname' ||
+          key === 'givenname' ||
+          key === 'nombres'
+        ) {
+          data.nombre = val;
+        } else if (
+          key === 'apellidos' ||
+          key === 'apellido' ||
+          key === 'lastname' ||
+          key === 'surname' ||
+          key === 'apellidopaterno'
+        ) {
+          data.apellidos = val;
+        } else if (
+          key === 'clinica' ||
+          key === 'negocio' ||
+          key === 'org' ||
+          key === 'organization' ||
+          key === 'empresa' ||
+          key === 'company'
+        ) {
+          data.clinica = val;
+        } else if (
+          key === 'domicilio' ||
+          key === 'direccion' ||
+          key === 'address' ||
+          key === 'calle' ||
+          key === 'dir'
+        ) {
+          data.domicilio = val;
+        } else if (key === 'estado' || key === 'state' || key === 'region') {
+          data.estado = matchEstadoFromText(val) || val;
+        } else if (
+          key === 'telefono' ||
+          key === 'tel' ||
+          key === 'phone' ||
+          key === 'whatsapp' ||
+          key === 'celular' ||
+          key === 'movil'
+        ) {
+          data.telefono = val;
+        } else if (
+          key === 'email' ||
+          key === 'mail' ||
+          key === 'correo' ||
+          key === 'e-mail'
+        ) {
+          data.email = val;
+        }
+      }
+
+      function parseVcardQr(raw) {
+        const data = emptyQrFields();
+        const lines = String(raw).split(/\r?\n/);
+        lines.forEach(function (line) {
+          const idx = line.indexOf(':');
+          if (idx < 1) return;
+          const prop = line.slice(0, idx).split(';')[0].toUpperCase();
+          const value = line.slice(idx + 1).trim();
+          if (prop === 'N') {
+            const parts = value.split(';');
+            data.apellidos = (parts[0] || '').trim();
+            data.nombre = [parts[1], parts[2]].filter(Boolean).join(' ').trim();
+          } else if (prop === 'FN' && !data.nombre) {
+            const bits = value.split(/\s+/);
+            data.nombre = bits.shift() || '';
+            data.apellidos = bits.join(' ');
+          } else if (prop === 'ORG') {
+            data.clinica = value.split(';')[0].trim();
+          } else if (prop === 'TEL') {
+            data.telefono = value;
+          } else if (prop === 'EMAIL') {
+            data.email = value;
+          } else if (prop === 'ADR') {
+            const adr = value.split(';');
+            const street = adr[2] || '';
+            const city = adr[3] || '';
+            const region = adr[4] || '';
+            data.domicilio = [street, city].filter(Boolean).join(', ');
+            if (region) data.estado = matchEstadoFromText(region) || region;
+          }
+        });
+        return data;
+      }
+
+      function parseJsonQr(raw) {
+        try {
+          const obj = JSON.parse(raw);
+          if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
+          const data = emptyQrFields();
+          Object.keys(obj).forEach(function (key) {
+            applyLabeledValue(data, key, obj[key]);
+          });
+          return data;
+        } catch (err) {
+          return null;
+        }
+      }
+
+      function parseLabeledLines(raw) {
+        const data = emptyQrFields();
+        const lines = String(raw).split(/\r?\n/);
+        let hits = 0;
+        lines.forEach(function (line) {
+          const match = line.match(/^\s*([^:=\n]{2,30})\s*[:=]\s*(.+)\s*$/);
+          if (!match) return;
+          const before = countFilledQrFields(data);
+          applyLabeledValue(data, match[1], match[2]);
+          if (countFilledQrFields(data) > before) hits += 1;
+        });
+        return hits ? data : null;
+      }
+
+      function parseDelimitedQr(raw) {
+        const data = emptyQrFields();
+        let parts = [];
+        if (raw.indexOf('|') !== -1) {
+          parts = raw.split('|');
+        } else if (raw.indexOf(';') !== -1 && raw.indexOf('\n') === -1) {
+          parts = raw.split(';');
+        } else if (raw.indexOf(',') !== -1) {
+          parts = raw.split(',');
+        } else {
+          parts = raw.split(/\r?\n/);
+        }
+        parts = parts
+          .map(function (part) {
+            return part.trim();
+          })
+          .filter(Boolean);
+        if (parts.length < 2) return data;
+
+        const leftovers = [];
+        parts.forEach(function (part) {
+          if (!data.email && looksLikeEmail(part)) {
+            data.email = part;
+          } else if (!data.telefono && looksLikePhone(part)) {
+            data.telefono = part;
+          } else if (!data.estado && matchEstadoFromText(part)) {
+            data.estado = matchEstadoFromText(part);
+          } else {
+            leftovers.push(part);
+          }
+        });
+
+        /*
+         * Orden tentativo del resto (expo TBD):
+         *  0 nombre · 1 apellidos · 2 clínica · 3 domicilio
+         */
+        if (leftovers[0]) data.nombre = leftovers[0];
+        if (leftovers[1]) data.apellidos = leftovers[1];
+        if (leftovers[2]) data.clinica = leftovers[2];
+        if (leftovers[3]) data.domicilio = leftovers.slice(3).join(', ');
+        return data;
+      }
+
+      /**
+       * Punto de ajuste cuando exista el formato oficial de la expo.
+       * Devuelve { data, confident, raw }.
+       */
+      function parseExpoQr(raw) {
+        const text = String(raw || '').trim();
+        let data = emptyQrFields();
+        if (!text) return { data: data, confident: false, raw: text };
+
+        if (/BEGIN:VCARD/i.test(text)) {
+          data = parseVcardQr(text);
+        } else {
+          data = parseJsonQr(text) || parseLabeledLines(text) || parseDelimitedQr(text);
+        }
+
+        const filled = countFilledQrFields(data);
+        const confident = filled >= 3 || !!(data.email && (data.nombre || data.clinica));
+        return { data: data, confident: confident, raw: text };
+      }
+
+      function setFieldValue(id, value) {
+        const node = document.getElementById(id);
+        if (!node || value == null || String(value).trim() === '') return false;
+        node.value = String(value).trim();
+        node.dispatchEvent(new Event('input', { bubbles: true }));
+        node.dispatchEvent(new Event('change', { bubbles: true }));
+        return true;
+      }
+
+      function applyQrToForm(parsed) {
+        const data = parsed.data || emptyQrFields();
+        setFieldValue('cli-nombre', data.nombre);
+        setFieldValue('cli-apellidos', data.apellidos);
+        setFieldValue('cli-clinica', data.clinica);
+        setFieldValue('cli-domicilio', data.domicilio);
+        setFieldValue('cli-telefono', data.telefono);
+        setFieldValue('cli-email', data.email);
+        if (data.estado) {
+          const matched = matchEstadoFromText(data.estado) || data.estado;
+          const select = document.getElementById('cli-estado');
+          if (select) {
+            const exists = Array.prototype.some.call(select.options, function (opt) {
+              return opt.value === matched;
+            });
+            if (exists) {
+              select.value = matched;
+              renderDistribuidores(matched);
+            }
+          }
+        }
+
+        const rawBox = document.getElementById('qr-raw');
+        const rawText = document.getElementById('qr-raw-text');
+        if (rawText) rawText.value = parsed.raw || '';
+        if (rawBox) rawBox.hidden = !!parsed.confident;
+      }
+
+      function setQrStatus(text) {
+        const node = document.getElementById('qr-status');
+        if (node) node.textContent = text || '';
+      }
+
+      function qrConfig() {
+        return {
+          fps: 10,
+          qrbox: function (viewfinderWidth, viewfinderHeight) {
+            const edge = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.72);
+            const size = Math.max(180, Math.min(edge, 280));
+            return { width: size, height: size };
+          },
+          aspectRatio: 1,
+        };
+      }
+
+      async function stopQrCamera() {
+        if (!qrScanner) return;
+        try {
+          const state = qrScanner.getState && qrScanner.getState();
+          if (state === 2 || state === 'SCANNING') {
+            await qrScanner.stop();
+          } else {
+            await qrScanner.stop();
+          }
+        } catch (err) {
+          /* ya estaba detenido */
+        }
+        try {
+          qrScanner.clear();
+        } catch (err) {
+          /* ignore */
+        }
+      }
+
+      async function closeQrScanner() {
+        await stopQrCamera();
+        qrScanner = null;
+        qrScanHandled = false;
+        if (qrModal) qrModal.hidden = true;
+        if (modal && modal.hidden) {
+          document.body.classList.remove('modal-open');
+        }
+        if (btnQr) btnQr.focus();
+      }
+
+      function onQrDecoded(decodedText) {
+        if (qrScanHandled) return;
+        qrScanHandled = true;
+        const parsed = parseExpoQr(decodedText);
+        applyQrToForm(parsed);
+        closeQrScanner().then(function () {
+          if (parsed.confident) {
+            showValidation('ok', 'Datos del QR cargados. Revisa el formulario.');
+          } else {
+            showValidation(
+              'ok',
+              'Se leyó el QR. Revisa el texto debajo del formulario y copia lo que falte.'
+            );
+          }
+        });
+      }
+
+      async function openQrScanner() {
+        if (typeof Html5Qrcode === 'undefined') {
+          showValidation(
+            'error',
+            'No se pudo cargar el escáner QR. Revisa tu conexión e inténtalo de nuevo.'
+          );
+          return;
+        }
+        if (!qrModal) return;
+        qrScanHandled = false;
+        setQrStatus('Iniciando cámara…');
+        qrModal.hidden = false;
+        document.body.classList.add('modal-open');
+
+        await stopQrCamera();
+        qrScanner = new Html5Qrcode('qr-reader', { verbose: false });
+
+        try {
+          await qrScanner.start(
+            { facingMode: 'environment' },
+            qrConfig(),
+            onQrDecoded
+          );
+          setQrStatus('Apunta al código QR.');
+          return;
+        } catch (errEnv) {
+          /* en laptops suele fallar facingMode; se prueba la primera cámara */
+        }
+
+        try {
+          const cameras = await Html5Qrcode.getCameras();
+          if (!cameras || !cameras.length) {
+            throw new Error('No se encontró una cámara.');
+          }
+          await qrScanner.start(cameras[0].id, qrConfig(), onQrDecoded);
+          setQrStatus('Apunta al código QR.');
+        } catch (err) {
+          setQrStatus(
+            'No se pudo abrir la cámara. Puedes subir una foto del QR.'
+          );
+          showValidation(
+            'error',
+            'No se pudo usar la cámara. Permite el acceso o sube una imagen del QR.'
+          );
+        }
+      }
+
+      async function scanQrFile(file) {
+        if (typeof Html5Qrcode === 'undefined') {
+          showValidation('error', 'No se pudo cargar el escáner QR.');
+          return;
+        }
+        try {
+          await stopQrCamera();
+          if (!qrScanner) {
+            qrScanner = new Html5Qrcode('qr-reader', { verbose: false });
+          }
+          setQrStatus('Leyendo imagen…');
+          const text = await qrScanner.scanFile(file, true);
+          onQrDecoded(text);
+        } catch (err) {
+          setQrStatus('No se detectó un QR en esa imagen.');
+          showValidation('error', 'No se detectó un código QR en la imagen.');
+        }
+      }
+
+      function fieldValue(id) {
+        const node = document.getElementById(id);
+        return node ? String(node.value || '').trim() : '';
+      }
+
+      function markFieldError(id, on) {
+        const node = document.getElementById(id);
+        const field = node ? node.closest('.form-field') : null;
+        if (field) field.classList.toggle('is-error', !!on);
+      }
+
+      function findDistribuidor(estado, id) {
+        return findDistribuidorById(id);
+      }
+
+      function resolveSelectedDistribuidor() {
+        const distId = fieldValue('cli-distribuidor');
+        if (!distId) return null;
+        if (distId !== 'otro') return findDistribuidorById(distId);
+        const fromAll = findDistribuidorById(fieldValue('cli-dist-todos'));
+        if (fromAll) {
+          return Object.assign({}, fromAll, { otro: true });
+        }
+        const libre = fieldValue('cli-dist-libre');
+        if (libre) {
+          return {
+            id: 'otro-libre',
+            name: libre,
+            email: '',
+            agentName: '',
+            agentEmail: '',
+            custom: true,
+            otro: true,
+          };
+        }
+        return {
+          id: 'otro',
+          name: '',
+          email: '',
+          custom: true,
+          otro: true,
+          incomplete: true,
+        };
+      }
+
+      function isOtroDistribuidor(cliente, dist) {
+        dist = dist || {};
+        cliente = cliente || {};
+        return (
+          cliente.distribuidorId === 'otro' ||
+          dist.otro === true ||
+          dist.custom === true ||
+          dist.id === 'otro' ||
+          dist.id === 'otro-libre'
+        );
+      }
+
+      function getClienteData() {
+        const estado = fieldValue('cli-estado');
+        const distId = fieldValue('cli-distribuidor');
+        const distLibre = distId === 'otro' ? fieldValue('cli-dist-libre') : '';
+        return {
+          nombre: fieldValue('cli-nombre'),
+          apellidos: fieldValue('cli-apellidos'),
+          clinica: fieldValue('cli-clinica'),
+          domicilio: fieldValue('cli-domicilio'),
+          estado: estado,
+          telefono: fieldValue('cli-telefono'),
+          email: fieldValue('cli-email'),
+          vendedor: fieldValue('cli-vendedor'),
+          distribuidorId: distId,
+          distribuidorOtro: distLibre,
+          distribuidor: resolveSelectedDistribuidor(),
+        };
+      }
+
+      function showValidation(kind, text) {
+        if (!msgEl) return;
+        if (validationHideTimer) {
+          window.clearTimeout(validationHideTimer);
+          validationHideTimer = null;
+        }
+        msgEl.hidden = false;
+        msgEl.textContent = text;
+        msgEl.classList.remove('validacion-msg--ok', 'validacion-msg--error');
+        msgEl.classList.add(
+          kind === 'ok' ? 'validacion-msg--ok' : 'validacion-msg--error'
+        );
+        validationHideTimer = window.setTimeout(function () {
+          clearValidationMessage();
+        }, 6000);
+      }
+
+      function validateClienteForm() {
+        const data = getClienteData();
+        const required = [
+          ['cli-nombre', data.nombre, 'Nombre'],
+          ['cli-apellidos', data.apellidos, 'Apellidos'],
+          ['cli-clinica', data.clinica, 'Nombre de clínica/negocio'],
+          ['cli-domicilio', data.domicilio, 'Domicilio'],
+          ['cli-estado', data.estado, 'Estado'],
+          ['cli-telefono', data.telefono, 'Teléfono/WhatsApp'],
+          ['cli-email', data.email, 'eMail'],
+          ['cli-vendedor', data.vendedor, 'Vendedor que levantó el TRANSFER'],
+        ];
+        required.forEach(function (item) {
+          markFieldError(item[0], false);
+        });
+        markFieldError('cli-dist-libre', false);
+        const missing = [];
+        required.forEach(function (item) {
+          if (!item[1]) {
+            markFieldError(item[0], true);
+            missing.push(item[2]);
+          }
+        });
+        if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+          markFieldError('cli-email', true);
+          missing.push('eMail válido');
+        }
+        const digits = data.telefono.replace(/\D/g, '');
+        if (data.telefono && digits.length < 10) {
+          markFieldError('cli-telefono', true);
+          missing.push('Teléfono a 10 dígitos');
+        }
+        if (data.estado) {
+          if (!data.distribuidorId) {
+            missing.push('Distribuidor');
+          } else if (
+            data.distribuidorId === 'otro' &&
+            (!data.distribuidor ||
+              data.distribuidor.incomplete ||
+              !data.distribuidor.name)
+          ) {
+            missing.push('Nombre del distribuidor (OTRO)');
+            markFieldError('cli-dist-libre', true);
+          }
+        }
+        return { ok: missing.length === 0, data: data, missing: missing };
+      }
+
+      function llaverosPorMonto(total) {
+        return Math.floor(Number(total || 0) / LLAVERO_CADA_MXN);
+      }
+
+      function fillResumen(container, draft) {
+        if (!container || !draft) return;
+        container.innerHTML = '';
+        container.classList.add('modal__summary--left');
+        const cliente = draft.cliente || {};
+        const dist = cliente.distribuidor;
+        const pedido = draft.pedido || {};
+        const rows = [
+          ['Cliente', (cliente.nombre + ' ' + cliente.apellidos).trim()],
+          ['Clínica/negocio', cliente.clinica],
+          ['Estado', cliente.estado],
+          ['Vendedor', cliente.vendedor],
+          ['Distribuidor', dist ? dist.name : 'Sin asignar'],
+          ['Agente', dist ? dist.agentName : '—'],
+          ['Pago', draft.pago === 'ahora' ? 'Paga ahora mismo' : 'Paga después'],
+          ['Kilogramos', formatKg(pedido.totalKg) + ' kg'],
+          ['Monto total', formatMoney(pedido.orderTotal || 0)],
+        ];
+        rows.forEach(function (row) {
+          const p = el('p', 'modal__summary-line');
+          p.appendChild(el('span', '', row[0]));
+          p.appendChild(el('strong', '', row[1] || '—'));
+          container.appendChild(p);
+        });
+      }
+
+      function startTransferFlow() {
+        const cliente = validateClienteForm();
+        if (!cliente.ok) {
+          openAccordion('cliente');
+          showValidation(
+            'error',
+            'Completa los datos del cliente: ' + cliente.missing.join(', ') + '.'
+          );
+          const firstError = document.querySelector('#form-cliente .form-field.is-error input, #form-cliente .form-field.is-error select');
+          if (firstError) firstError.focus();
+          return;
+        }
+        pedidoSnapshot = capturePedidoSnapshot();
+        if (!pedidoSnapshot.lines.length) {
+          openAccordion('pedido');
+          showValidation('error', 'Agrega al menos un producto para crear el transfer.');
+          return;
+        }
+        transferDraft = {
+          cliente: cliente.data,
+          pedido: pedidoSnapshot,
+          pago: null,
+        };
+        clearValidationMessage();
+        if (!modal) return;
+        showModalStep('step-pago');
+        modal.hidden = false;
+        document.body.classList.add('modal-open');
+        const first = document.getElementById('btn-paga-ahora');
+        if (first) first.focus();
+      }
+
+      function openModal() {
+        startTransferFlow();
+      }
+
+      function closeModal() {
+        if (!modal) return;
+        modal.hidden = true;
+        document.body.classList.remove('modal-open');
+        showModalStep('step-pago');
+      }
+
+      function choosePago(tipo) {
+        if (!transferDraft) return;
+        transferDraft.pago = tipo;
+        fillResumen(document.getElementById('modal-resumen'), transferDraft);
+        showModalStep('step-confirmar');
+        const confirmBtn = document.getElementById('btn-modal-si');
+        if (confirmBtn) confirmBtn.focus();
+      }
+
+      function pad2(n) {
+        return String(n).padStart(2, '0');
+      }
+
+      function folioDateStamp(d) {
+        return d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate());
+      }
+
+      function openTransfersDb() {
+        return new Promise(function (resolve, reject) {
+          if (!window.indexedDB) {
+            reject(new Error('IndexedDB no disponible'));
+            return;
+          }
+          const req = window.indexedDB.open('kantek', 1);
+          req.onupgradeneeded = function () {
+            const db = req.result;
+            if (!db.objectStoreNames.contains('transfers')) {
+              db.createObjectStore('transfers', { keyPath: 'folio' });
+            }
+          };
+          req.onsuccess = function () {
+            resolve(req.result);
+          };
+          req.onerror = function () {
+            reject(req.error);
+          };
+        });
+      }
+
+      function listLocalTransfers() {
+        return openTransfersDb()
+          .then(function (db) {
+            return new Promise(function (resolve, reject) {
+              const tx = db.transaction('transfers', 'readonly');
+              const store = tx.objectStore('transfers');
+              const req = store.getAll();
+              req.onsuccess = function () {
+                resolve(req.result || []);
+              };
+              req.onerror = function () {
+                reject(req.error);
+              };
+            });
+          })
+          .catch(function () {
+            try {
+              return JSON.parse(localStorage.getItem('kantek_transfers') || '[]');
+            } catch (err) {
+              return [];
+            }
+          });
+      }
+
+      function saveLocalTransfer(record) {
+        return openTransfersDb()
+          .then(function (db) {
+            return new Promise(function (resolve, reject) {
+              const tx = db.transaction('transfers', 'readwrite');
+              tx.objectStore('transfers').put(record);
+              tx.oncomplete = function () {
+                resolve(record);
+              };
+              tx.onerror = function () {
+                reject(tx.error);
+              };
+            });
+          })
+          .catch(function () {
+            const list = JSON.parse(localStorage.getItem('kantek_transfers') || '[]');
+            const next = list.filter(function (item) {
+              return item.folio !== record.folio;
+            });
+            next.push(record);
+            localStorage.setItem('kantek_transfers', JSON.stringify(next));
+            return record;
+          });
+      }
+
+      function nextLocalFolio(existing) {
+        const prefix = 'TR-' + folioDateStamp(new Date()) + '-';
+        let max = 0;
+        (existing || []).forEach(function (item) {
+          if (!item || !item.folio || item.folio.indexOf(prefix) !== 0) return;
+          const n = parseInt(item.folio.slice(prefix.length), 10);
+          if (!isNaN(n) && n > max) max = n;
+        });
+        return prefix + String(max + 1).padStart(3, '0');
+      }
+
+      function splitEmails(raw) {
+        return String(raw || '')
+          .split(';')
+          .map(function (part) {
+            return part.trim();
+          })
+          .filter(function (part) {
+            return part && part !== '-' && part.indexOf('@') !== -1;
+          });
+      }
+
+      /**
+       * Destinatarios en Modo Productivo:
+       *  Distribuidor normal:
+       *    1) email del cliente
+       *    2) mail(s) del distribuidor elegido (separados por ";")
+       *    3) mail del agente, si no es "-"
+       *    4) ventas@kantekpremium.mx
+       *    5) gerencia.comercial@maxpro.com.mx
+       *  OTRO: cliente + ventas@kantekpremium.mx + gerencia.comercial@maxpro.com.mx
+       *
+       * El envío real solo se hará con Modo de Prueba DESACTIVADO.
+       */
+      function buildTransferEmails(record) {
+        const cliente = record.cliente || {};
+        const dist = record.distribuidor || cliente.distribuidor || {};
+        const subject = "Transfer KNTK CVDL '26 " + (record.folio || '');
+        const body =
+          'Folio: ' +
+          record.folio +
+          '\nCliente: ' +
+          cliente.nombre +
+          ' ' +
+          cliente.apellidos +
+          '\nClínica: ' +
+          cliente.clinica +
+          '\nEstado: ' +
+          cliente.estado +
+          '\nVendedor: ' +
+          (cliente.vendedor || '') +
+          '\nDistribuidor: ' +
+          (dist.name || 'Sin asignar') +
+          '\nMail distribuidor: ' +
+          (dist.email || '') +
+          '\nAgente: ' +
+          (dist.agentName || '') +
+          '\nMail agente: ' +
+          (dist.agentEmail || '') +
+          '\nPago: ' +
+          (record.pago === 'ahora' ? 'Paga ahora mismo' : 'Paga después') +
+          '\nTotal: ' +
+          formatMoney(record.pedido && record.pedido.orderTotal) +
+          '\nLlaveros: ' +
+          record.llaveros;
+
+        const emails = [];
+
+        function add(role, name, raw) {
+          splitEmails(raw).forEach(function (to) {
+            emails.push({
+              role: role,
+              to: to,
+              name: name || '',
+              subject: subject,
+              body: body,
+            });
+          });
+        }
+
+        if (isOtroDistribuidor(cliente, dist)) {
+          add('cliente', (cliente.nombre || '') + ' ' + (cliente.apellidos || ''), cliente.email);
+          add('ventas', 'Ventas KANTEK', MAIL_VENTAS_KANTEK);
+          add('gerencia', 'Gerencia comercial', MAIL_GERENCIA_COMERCIAL);
+          return emails;
+        }
+        add('cliente', (cliente.nombre || '') + ' ' + (cliente.apellidos || ''), cliente.email);
+        add('distribuidor', dist.name || '', dist.email);
+        add('agente', dist.agentName || '', dist.agentEmail);
+        add('ventas', 'Ventas KANTEK', MAIL_VENTAS_KANTEK);
+        add('gerencia', 'Gerencia comercial', MAIL_GERENCIA_COMERCIAL);
+        return emails;
+      }
+
+      function isTestMode() {
+        const input = document.getElementById('modo-prueba');
+        return !input || input.checked;
+      }
+
+      var testModeUnlocking = false;
+      var TEST_MODE_KEY =
+        'b20cfcc2e5908c19eb62b9960121dcb8f10b872b309843f6f80a6a89d343261a';
+
+      async function hashPin(value) {
+        const bytes = new TextEncoder().encode(String(value || ''));
+        const buf = await crypto.subtle.digest('SHA-256', bytes);
+        return Array.from(new Uint8Array(buf))
+          .map(function (b) {
+            return b.toString(16).padStart(2, '0');
+          })
+          .join('');
+      }
+
+      function setTestMode(on) {
+        const input = document.getElementById('modo-prueba');
+        if (!input) return;
+        testModeUnlocking = true;
+        input.checked = !!on;
+        document.body.classList.toggle('test-mode-on', input.checked);
+        try {
+          localStorage.setItem('kantek_modo_prueba', input.checked ? '1' : '0');
+        } catch (err) {
+          /* ignore */
+        }
+        testModeUnlocking = false;
+      }
+
+      function closeTestModePinModal() {
+        const modalPin = document.getElementById('modal-pin');
+        const pinInput = document.getElementById('pin-input');
+        const pinError = document.getElementById('pin-error');
+        if (modalPin) modalPin.hidden = true;
+        if (pinInput) pinInput.value = '';
+        if (pinError) pinError.hidden = true;
+        const qrOpen = document.getElementById('modal-qr');
+        if (
+          (modal && modal.hidden) &&
+          (!qrOpen || qrOpen.hidden)
+        ) {
+          document.body.classList.remove('modal-open');
+        }
+      }
+
+      function openTestModePinModal() {
+        const modalPin = document.getElementById('modal-pin');
+        const pinInput = document.getElementById('pin-input');
+        const pinError = document.getElementById('pin-error');
+        if (!modalPin) return;
+        if (pinError) pinError.hidden = true;
+        if (pinInput) pinInput.value = '';
+        modalPin.hidden = false;
+        document.body.classList.add('modal-open');
+        window.setTimeout(function () {
+          if (pinInput) pinInput.focus();
+        }, 30);
+      }
+
+      function initTestModeSwitch() {
+        const input = document.getElementById('modo-prueba');
+        if (!input) return;
+        try {
+          const saved = localStorage.getItem('kantek_modo_prueba');
+          if (saved === '0') input.checked = false;
+          else if (saved === '1') input.checked = true;
+        } catch (err) {
+          input.checked = true;
+        }
+        document.body.classList.toggle('test-mode-on', input.checked);
+
+        input.addEventListener('change', function () {
+          if (testModeUnlocking) return;
+          if (!input.checked) {
+            setTestMode(false);
+            return;
+          }
+          input.checked = false;
+          document.body.classList.remove('test-mode-on');
+          openTestModePinModal();
+        });
+
+        const formPin = document.getElementById('form-pin');
+        if (formPin) {
+          formPin.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const pinInput = document.getElementById('pin-input');
+            const pinError = document.getElementById('pin-error');
+            const typed = pinInput ? pinInput.value : '';
+            hashPin(typed)
+              .then(function (digest) {
+                if (digest === TEST_MODE_KEY) {
+                  closeTestModePinModal();
+                  setTestMode(true);
+                  showValidation('ok', 'Modo de Prueba activado.');
+                  return;
+                }
+                if (pinError) pinError.hidden = false;
+                if (pinInput) {
+                  pinInput.value = '';
+                  pinInput.focus();
+                }
+                showValidation('error', 'Clave incorrecta. El Modo de Prueba no se activó.');
+              })
+              .catch(function () {
+                showValidation('error', 'No se pudo validar la clave.');
+              });
+          });
+        }
+        document.querySelectorAll('[data-pin-close]').forEach(function (node) {
+          node.addEventListener('click', closeTestModePinModal);
+        });
+      }
+
+      function formatFechaHora(iso) {
+        const d = iso ? new Date(iso) : new Date();
+        if (isNaN(d.getTime())) return String(iso || '');
+        return (
+          d.getFullYear() +
+          '-' +
+          pad2(d.getMonth() + 1) +
+          '-' +
+          pad2(d.getDate()) +
+          ' ' +
+          pad2(d.getHours()) +
+          ':' +
+          pad2(d.getMinutes()) +
+          ':' +
+          pad2(d.getSeconds())
+        );
+      }
+
+      function buildTransferWorkbook(record) {
+        const cliente = record.cliente || {};
+        const dist = record.distribuidor || cliente.distribuidor || {};
+        const pedido = record.pedido || {};
+        const productos = record.productos || pedido.lines || [];
+        const resumenRows = [
+          ['Campo', 'Valor'],
+          ['Folio del Transfer', record.folio || ''],
+          ['Fecha y hora', formatFechaHora(record.createdAt)],
+          ['Modo', record.prueba ? 'Prueba' : 'Real'],
+          ['Nombre', cliente.nombre || ''],
+          ['Apellidos', cliente.apellidos || ''],
+          ['Clínica/Negocio', cliente.clinica || ''],
+          ['Domicilio', cliente.domicilio || ''],
+          ['Estado', cliente.estado || ''],
+          ['Teléfono', cliente.telefono || ''],
+          ['Email', cliente.email || ''],
+          ['Vendedor', cliente.vendedor || ''],
+          ['Distribuidor elegido', dist.name || 'Sin asignar'],
+          [
+            'Distribuidor (OTRO)',
+            cliente.distribuidorOtro || (dist.custom ? dist.name : '') || '',
+          ],
+          ['Mail distribuidor', dist.email || ''],
+          ['Agente', dist.agentName || ''],
+          ['Mail agente', dist.agentEmail && dist.agentEmail !== '-' ? dist.agentEmail : ''],
+          [
+            'Pago',
+            record.pago === 'ahora' ? 'Paga ahora mismo' : 'Paga después',
+          ],
+          ['Cantidad de llaveros', record.llaveros || 0],
+          ['Subtotal productos', pedido.productTotal || 0],
+          ['Descuento 15%', pedido.discount || 0],
+          ['Monto total', record.montoTotal || pedido.orderTotal || 0],
+          ['Kilogramos totales', pedido.totalKg || 0],
+        ];
+
+        const productoRows = [
+          [
+            'Producto',
+            'Presentación',
+            'Cantidad',
+            'Kilos',
+            'Precio unitario',
+            'Subtotal',
+          ],
+        ];
+        productos.forEach(function (line) {
+          productoRows.push([
+            line.product || '',
+            line.presentacion || '',
+            line.qty || 0,
+            line.kg || 0,
+            line.unitPrice || 0,
+            line.money || 0,
+          ]);
+        });
+        if (pedido.discount) {
+          productoRows.push([]);
+          productoRows.push(['DESCUENTO 15%', '', '', '', '', -pedido.discount]);
+        }
+        productoRows.push([
+          'TOTAL',
+          '',
+          '',
+          pedido.totalKg || 0,
+          '',
+          record.montoTotal || pedido.orderTotal || 0,
+        ]);
+
+        const wsResumen = XLSX.utils.aoa_to_sheet(resumenRows);
+        wsResumen['!cols'] = [{ wch: 28 }, { wch: 42 }];
+        const wsProductos = XLSX.utils.aoa_to_sheet(productoRows);
+        wsProductos['!cols'] = [
+          { wch: 36 },
+          { wch: 16 },
+          { wch: 12 },
+          { wch: 10 },
+          { wch: 16 },
+          { wch: 14 },
+        ];
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen');
+        XLSX.utils.book_append_sheet(wb, wsProductos, 'Productos');
+        return wb;
+      }
+
+      function transferExcelFilename(record) {
+        const folio = (record && record.folio) || 'SIN-FOLIO';
+        const prefix = record && record.prueba ? 'Transfer_PRUEBA_' : 'Transfer_';
+        return prefix + folio + '.xlsx';
+      }
+
+      function downloadTransferExcel(record) {
+        if (typeof XLSX === 'undefined') {
+          alert(
+            'No se pudo cargar la librería de Excel. Revisa tu conexión a internet e inténtalo de nuevo.'
+          );
+          return false;
+        }
+        const wb = buildTransferWorkbook(record);
+        XLSX.writeFile(wb, transferExcelFilename(record));
+        return true;
+      }
+
+      function transferEmailFilename(record) {
+        return 'Transfer-' + (record.folio || 'SIN-FOLIO') + '.xlsx';
+      }
+
+      function transferEmailSubject(record) {
+        return "Transfer KNTK CVDL '26 " + (record.folio || '');
+      }
+
+      function cleanExcelBase64(raw) {
+        var s = String(raw || '').trim();
+        var marker = 'base64,';
+        var idx = s.toLowerCase().indexOf(marker);
+        if (s.toLowerCase().indexOf('data:') === 0 && idx !== -1) {
+          s = s.slice(idx + marker.length);
+        }
+        return s.replace(/\s+/g, '');
+      }
+
+      async function describeFunctionsError(error) {
+        if (!error) return 'Falló el envío del correo.';
+        var bodyText = '';
+        var ctx = error.context;
+        if (ctx && typeof ctx.clone === 'function') {
+          try {
+            ctx = ctx.clone();
+          } catch (errClone) {
+            /* usar el Response original */
+          }
+        }
+        if (ctx && typeof ctx.json === 'function') {
+          try {
+            var body = await ctx.json();
+            if (body != null) {
+              bodyText =
+                typeof body === 'string' ? body : JSON.stringify(body);
+            }
+          } catch (errRead) {
+            try {
+              if (error.context && typeof error.context.text === 'function') {
+                var rawCtx =
+                  typeof error.context.clone === 'function'
+                    ? error.context.clone()
+                    : error.context;
+                bodyText = await rawCtx.text();
+              }
+            } catch (errText) {
+              /* ignore */
+            }
+          }
+        }
+        if (bodyText) return bodyText;
+        return error.message || 'Falló el envío del correo.';
+      }
+
+      async function sendTransferEmails(record) {
+        if (typeof XLSX === 'undefined') {
+          return {
+            ok: false,
+            error: 'No se pudo generar el Excel (librería no cargada).',
+          };
+        }
+
+        const cliente = record.cliente || {};
+        const dist = record.distribuidor || cliente.distribuidor || {};
+        const otroDist = isOtroDistribuidor(cliente, dist);
+        const mailAgente = otroDist
+          ? ''
+          : dist.agentEmail && dist.agentEmail !== '-'
+            ? dist.agentEmail
+            : '';
+        const mailDistribuidor = otroDist ? '' : dist.email || '';
+        const clienteEmail = cliente.email || '';
+        const workbook = buildTransferWorkbook(record);
+        const excelBase64 = cleanExcelBase64(
+          XLSX.write(workbook, {
+            bookType: 'xlsx',
+            type: 'base64',
+          })
+        );
+        const payload = {
+          folio: record.folio || '',
+          clienteEmail: clienteEmail,
+          mailDistribuidor: mailDistribuidor,
+          mailAgente: mailAgente,
+          excelBase64: excelBase64,
+          nombreArchivo: transferEmailFilename(record),
+          asunto: transferEmailSubject(record),
+        };
+
+        console.log('[correo] invocando send-transfer-email', {
+          folio: payload.folio,
+          otro: otroDist,
+          clienteEmail: payload.clienteEmail,
+          mailDistribuidor: payload.mailDistribuidor,
+          mailAgente: payload.mailAgente,
+          nombreArchivo: payload.nombreArchivo,
+          asunto: payload.asunto,
+        });
+
+        const client = await getSupabaseClient();
+        if (!client || !client.functions || !client.functions.invoke) {
+          return {
+            ok: false,
+            error: 'No se pudo cargar el cliente de Supabase para enviar el correo.',
+          };
+        }
+
+        const { data, error } = await client.functions.invoke(
+          'send-transfer-email',
+          { body: payload }
+        );
+        if (error) {
+          const detail = await describeFunctionsError(error);
+          console.log('[correo] error', error, detail, data);
+          return {
+            ok: false,
+            error: detail || error.message || 'Falló el envío del correo.',
+          };
+        }
+        console.log('[correo] enviado', data);
+        return { ok: true, data: data };
+      }
+
+      function mapRecordToSupabaseRow(record) {
+        const cliente = record.cliente || {};
+        const dist = record.distribuidor || cliente.distribuidor || {};
+        const agentEmail =
+          dist.agentEmail && dist.agentEmail !== '-' ? dist.agentEmail : '';
+        return {
+          folio: record.folio || '',
+          fecha: record.createdAt || new Date().toISOString(),
+          nombre: cliente.nombre || '',
+          apellidos: cliente.apellidos || '',
+          clinica: cliente.clinica || '',
+          domicilio: cliente.domicilio || '',
+          estado: cliente.estado || '',
+          telefono: cliente.telefono || '',
+          email: cliente.email || '',
+          vendedor: cliente.vendedor || '',
+          distribuidor: dist.name || '',
+          distribuidor_otro:
+            cliente.distribuidorOtro || (dist.custom ? dist.name : '') || '',
+          mail_distribuidor: dist.email || '',
+          agente: dist.agentName || '',
+          mail_agente: agentEmail,
+          paga_ahora: record.pago === 'ahora',
+          llaveros: Number(record.llaveros) || 0,
+          monto_total: Number(record.montoTotal) || 0,
+          productos: record.productos || [],
+          es_prueba: !!record.prueba,
+        };
+      }
+
+      async function getSupabaseClient() {
+        if (window.kantekSupabase) return window.kantekSupabase;
+        if (typeof window.initKantekSupabase === 'function') {
+          const client = window.initKantekSupabase();
+          if (client) return client;
+        }
+        await new Promise(function (resolve) {
+          window.setTimeout(resolve, 300);
+        });
+        if (window.kantekSupabase) return window.kantekSupabase;
+        if (typeof window.initKantekSupabase === 'function') {
+          return window.initKantekSupabase();
+        }
+        return null;
+      }
+
+      async function saveTransferToSupabase(record) {
+        try {
+          const client = await getSupabaseClient();
+          if (!client) {
+            return {
+              ok: false,
+              error: 'No se pudo cargar el cliente de Supabase.',
+            };
+          }
+          const row = mapRecordToSupabaseRow(record);
+          let payload = row;
+          for (let attempt = 0; attempt < 6; attempt++) {
+            const { error } = await client.from('transfers').insert([payload]);
+            if (!error) return { ok: true };
+            const missing = /Could not find the '([^']+)' column/.exec(
+              error.message || ''
+            );
+            if (missing && missing[1] && payload[missing[1]] !== undefined) {
+              const next = {};
+              Object.keys(payload).forEach(function (key) {
+                if (key !== missing[1]) next[key] = payload[key];
+              });
+              payload = next;
+              continue;
+            }
+            return { ok: false, error: error.message || 'Error de Supabase' };
+          }
+          return { ok: false, error: 'No se pudo guardar el transfer en Supabase.' };
+        } catch (err) {
+          return {
+            ok: false,
+            error: (err && err.message) || 'Error inesperado al guardar',
+          };
+        }
+      }
+
+      async function persistTransfer(record) {
+        if (!record.folio) {
+          const existing = await listLocalTransfers();
+          record.folio = nextLocalFolio(existing);
+        }
+        try {
+          await saveLocalTransfer(record);
+        } catch (err) {
+          /* la copia local es de respaldo */
+        }
+
+        const remote = await saveTransferToSupabase(record);
+        record.supabaseOk = remote.ok;
+        record.supabaseError = remote.ok ? '' : remote.error || 'Error al guardar';
+        return record;
+      }
+
+      function buildTransferRecord(draft) {
+        const now = new Date();
+        const pagoAhora = draft.pago === 'ahora';
+        const total = draft.pedido ? draft.pedido.orderTotal : 0;
+        return {
+          folio: '',
+          createdAt: now.toISOString(),
+          cliente: draft.cliente,
+          distribuidor: draft.cliente && draft.cliente.distribuidor
+            ? draft.cliente.distribuidor
+            : null,
+          pedido: draft.pedido,
+          productos: draft.pedido ? draft.pedido.lines : [],
+          montoTotal: total,
+          pago: draft.pago,
+          llaveros: pagoAhora ? llaverosPorMonto(total) : 0,
+          prueba: isTestMode(),
+        };
+      }
+
+      async function confirmTransfer() {
+        if (!transferDraft) return;
+        const pagoAhora = transferDraft.pago === 'ahora';
+        if (pagoAhora) {
+          const n = llaverosPorMonto(transferDraft.pedido.orderTotal);
+          const destaque = document.getElementById('modal-llavero-destaque');
+          if (destaque) {
+            destaque.textContent = '¡Tu compra equivale a ' + n + ' llaveros!';
+          }
+          showModalStep('step-llavero');
+          const ok = document.getElementById('btn-llavero-ok');
+          if (ok) ok.focus();
+          return;
+        }
+        await finishTransfer();
+      }
+
+      async function finishTransfer() {
+        if (!transferDraft) return;
+        const record = buildTransferRecord(transferDraft);
+        try {
+          await persistTransfer(record);
+        } catch (err) {
+          record.supabaseOk = false;
+          record.supabaseError =
+            (err && err.message) || 'No se pudo guardar el transfer.';
+        }
+
+        try {
+          if (record.prueba) {
+            downloadTransferExcel(record);
+            record.emailOk = false;
+            record.emailSkipped = true;
+          } else {
+            const mailed = await sendTransferEmails(record);
+            record.emailOk = !!(mailed && mailed.ok);
+            record.emailError = mailed && mailed.error ? mailed.error : '';
+          }
+        } catch (err) {
+          record.emailOk = false;
+          record.emailError =
+            (err && err.message) || 'El transfer se generó, pero falló el correo.';
+        }
+
+        const folioEl = document.getElementById('modal-folio');
+        if (folioEl) folioEl.textContent = record.folio;
+        fillResumen(document.getElementById('modal-exito-resumen'), transferDraft);
+        const extra = document.getElementById('modal-exito-resumen');
+        if (extra) {
+          const pFolio = el('p', 'modal__summary-line');
+          pFolio.appendChild(el('span', '', 'Folio'));
+          pFolio.appendChild(el('strong', '', record.folio));
+          extra.insertBefore(pFolio, extra.firstChild);
+          const pModo = el('p', 'modal__summary-line');
+          pModo.appendChild(el('span', '', 'Modo'));
+          pModo.appendChild(
+            el('strong', '', record.prueba ? 'Prueba' : 'Real')
+          );
+          extra.insertBefore(pModo, pFolio.nextSibling);
+        }
+        showModalStep('step-exito');
+
+        if (!record.supabaseOk) {
+          showValidation(
+            'error',
+            'No se pudo guardar el transfer en Supabase' +
+              (record.supabaseError ? ': ' + record.supabaseError : '.') +
+              (record.prueba
+                ? ' El Excel se descargó de todos modos.'
+                : ' El transfer se generó de todos modos.')
+          );
+        } else if (record.prueba) {
+          showValidation(
+            'ok',
+            'Modo de Prueba: se descargó el Excel. No se envió ningún correo.'
+          );
+        } else if (record.emailOk) {
+          showValidation(
+            'ok',
+            'Transfer ' +
+              record.folio +
+              ' creado. El correo se envió correctamente.'
+          );
+        } else {
+          showValidation(
+            'error',
+            'Transfer ' +
+              record.folio +
+              ' creado, pero el correo no se envió' +
+              (record.emailError ? ': ' + record.emailError : '.')
+          );
+        }
+      }
+
+      function fechaArchivo() {
+        const d = new Date();
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return yyyy + '-' + mm + '-' + dd;
+      }
+
+      function downloadExcelPedido() {
+        if (typeof XLSX === 'undefined') {
+          alert(
+            'No se pudo cargar la librería de Excel. Revisa tu conexión a internet e inténtalo de nuevo.'
+          );
+          return;
+        }
+
+        const snap = pedidoSnapshot || capturePedidoSnapshot();
+        const rows = [];
+
+        if (!snap.lines.length) {
+          rows.push(['Sin productos en el pedido actual', '', '', '', '']);
+          rows.push([]);
+          rows.push(['Total del pedido', '', '', snap.totalKg, snap.orderTotal]);
+        } else {
+          rows.push(['Producto', 'Presentación', 'Cantidad', 'kg', 'Importe']);
+          snap.lines.forEach(function (line) {
+            rows.push([
+              line.product,
+              line.presentacion,
+              line.qty,
+              line.kg,
+              line.money,
+            ]);
+          });
+          rows.push([]);
+          rows.push(['DESCUENTO 15%', '', '', '', snap.discount]);
+          rows.push(['Total del pedido', '', '', snap.totalKg, snap.orderTotal]);
+        }
+
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        ws['!cols'] = [
+          { wch: 42 },
+          { wch: 16 },
+          { wch: 12 },
+          { wch: 10 },
+          { wch: 14 },
+        ];
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Pedido');
+        XLSX.writeFile(wb, 'Pedido_KANTEK_' + fechaArchivo() + '.xlsx');
+      }
+
+      function adjustQty(input, delta) {
+        const current = normalizeValue(input);
+        const next = Math.max(0, current + delta);
+        input.value = next;
+        updateTotal();
+      }
+
+      /*
+       * Dictado por voz (Web Speech API / webkitSpeechRecognition).
+       * Lang: es-MX. Cada producto+presentación mencionada REEMPLAZA
+       * la cantidad actual (no suma). El resto de SKUs no se toca.
+       */
+      var VoiceRecCtor =
+        window.SpeechRecognition || window.webkitSpeechRecognition || null;
+      var voiceRec = null;
+      var voiceListening = false;
+      var voiceStarting = false;
+      var voiceWanted = false;
+      var voiceMicPromptDone = false;
+      var voiceSessionAdds = [];
+      var voiceSessionSkipped = [];
+      var voiceProcessed = {};
+      var voiceLastInterim = '';
+      var voiceAudioCtx = null;
+      var voiceAnalyser = null;
+      var voiceMicStream = null;
+      var voiceEqRaf = 0;
+
+      function isFileProtocol() {
+        return window.location.protocol === 'file:';
+      }
+
+      function isHttpContext() {
+        return (
+          window.location.protocol === 'http:' ||
+          window.location.protocol === 'https:'
+        );
+      }
+
+      function initFileProtocolWarning() {
+        if (!isFileProtocol()) return;
+        document.body.classList.add('is-file-protocol');
+        const aviso = document.getElementById('aviso-file');
+        if (aviso) aviso.hidden = false;
+        console.log(
+          '[dictado] Abierto como file://. Sirve el proyecto con: python3 server.py'
+        );
+      }
+
+      function getSpeechRecognition() {
+        return VoiceRecCtor;
+      }
+
+      function showMicDeniedHelp() {
+        const box = document.getElementById('dictado-bloqueado');
+        if (box) box.hidden = false;
+        const btn = document.getElementById('btn-dictar');
+        if (btn) btn.disabled = true;
+        showValidation(
+          'error',
+          'El micrófono está bloqueado. Haz clic en el candado de la barra de direcciones → Micrófono → Permitir, y luego recarga la página.'
+        );
+      }
+
+      async function queryMicPermission() {
+        if (!navigator.permissions || !navigator.permissions.query) {
+          console.log('[dictado] permissions.query no disponible');
+          return null;
+        }
+        try {
+          const result = await navigator.permissions.query({
+            name: 'microphone',
+          });
+          console.log('[dictado] permiso actual:', result.state);
+          return result.state;
+        } catch (err) {
+          console.log('[dictado] permissions.query error:', err);
+          return null;
+        }
+      }
+
+      /**
+       * Una sola petición de permiso, solo si el estado es "prompt".
+       * Nunca llama getUserMedia si ya es granted/denied, ni dos veces en la misma carga.
+       */
+      async function ensureMicGranted() {
+        const state = await queryMicPermission();
+        if (state === 'granted') {
+          console.log('[dictado] permiso ya concedido; no se pide de nuevo');
+          return true;
+        }
+        if (state === 'denied') {
+          console.log('[dictado] permiso denegado por el navegador');
+          showMicDeniedHelp();
+          return false;
+        }
+        if (voiceMicPromptDone) {
+          console.log(
+            '[dictado] el permiso ya se pidió en esta sesión; no se vuelve a solicitar'
+          );
+          return false;
+        }
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          console.log('[dictado] getUserMedia no disponible');
+          return false;
+        }
+        voiceMicPromptDone = true;
+        console.log('[dictado] solicitando permiso una sola vez');
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+          });
+          stream.getTracks().forEach(function (track) {
+            track.stop();
+          });
+          console.log('[dictado] permiso concedido');
+          return true;
+        } catch (err) {
+          console.log('[dictado] permiso denegado o error:', err);
+          showMicDeniedHelp();
+          return false;
+        }
+      }
+
+      function dumpRecognitionResults(event) {
+        const rows = [];
+        if (!event || !event.results) return rows;
+        for (let i = 0; i < event.results.length; i++) {
+          const res = event.results[i];
+          const alt = res[0] || {};
+          const row = {
+            i: i,
+            isFinal: !!res.isFinal,
+            transcript: alt.transcript || '',
+            confidence: alt.confidence,
+          };
+          rows.push(row);
+          console.log('[dictado] event.results[' + i + ']', row);
+        }
+        return rows;
+      }
+
+      function initVoiceRecognition() {
+        if (voiceRec || !VoiceRecCtor) {
+          console.log('[dictado] reutilizando instancia SpeechRecognition');
+          return voiceRec;
+        }
+        voiceRec = new VoiceRecCtor();
+        voiceRec.lang = 'es-MX';
+        voiceRec.continuous = false;
+        voiceRec.interimResults = true;
+        voiceRec.maxAlternatives = 1;
+        console.log('[dictado] instancia SpeechRecognition creada', {
+          lang: voiceRec.lang,
+          continuous: voiceRec.continuous,
+          interimResults: voiceRec.interimResults,
+        });
+
+        voiceRec.onaudiostart = function () {
+          console.log('[dictado] onaudiostart');
+          showHeardText('onaudiostart: el motor ya tiene audio…');
+        };
+        voiceRec.onaudioend = function () {
+          console.log('[dictado] onaudioend');
+        };
+        voiceRec.onsoundstart = function () {
+          console.log('[dictado] onsoundstart');
+          showHeardText('onsoundstart: detecté sonido…');
+        };
+        voiceRec.onsoundend = function () {
+          console.log('[dictado] onsoundend');
+        };
+        voiceRec.onspeechstart = function () {
+          console.log('[dictado] onspeechstart');
+          showHeardText('onspeechstart: detecté voz…');
+        };
+        voiceRec.onspeechend = function () {
+          console.log('[dictado] onspeechend');
+        };
+
+        voiceRec.onstart = function () {
+          console.log('[dictado] onstart');
+          voiceListening = true;
+          voiceStarting = false;
+          setDictadoUi(true, '');
+          showHeardText('onstart: escuchando. Habla ahora…');
+        };
+
+        voiceRec.onresult = function (event) {
+          console.log('[dictado] onresult CRUDO', event);
+          console.log('[dictado] onresult resultIndex=', event.resultIndex);
+          const rows = dumpRecognitionResults(event);
+          let heard = '';
+          rows.forEach(function (row) {
+            heard += (row.transcript || '') + ' ';
+          });
+          heard = heard.trim();
+          voiceLastInterim = heard;
+          showHeardText(heard ? heard : '(onresult llegó vacío)');
+          if (voiceListening) setDictadoUi(true, heard);
+
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            if (!event.results[i].isFinal) continue;
+            const piece = event.results[i][0] && event.results[i][0].transcript;
+            if (piece) consumeVoiceTranscript(piece);
+          }
+        };
+
+        voiceRec.onerror = function (event) {
+          const code = event && event.error ? event.error : 'desconocido';
+          console.log('[dictado] onerror', code, event);
+          showHeardText('Error de reconocimiento: ' + code);
+          showValidation('error', 'Error de reconocimiento: ' + code);
+          if (code === 'no-speech' || code === 'aborted') return;
+          if (code === 'not-allowed' || code === 'service-not-allowed') {
+            voiceWanted = false;
+            voiceStarting = false;
+            voiceListening = false;
+            stopVoiceMeter();
+            showMicDeniedHelp();
+            setDictadoUi(false, '');
+          }
+        };
+
+        voiceRec.onend = function () {
+          console.log('[dictado] recognition.onend wanted=', voiceWanted);
+          voiceStarting = false;
+          if (!voiceWanted) {
+            voiceListening = false;
+            setDictadoUi(false, '');
+            return;
+          }
+          if (isFileProtocol()) {
+            voiceWanted = false;
+            voiceListening = false;
+            stopVoiceMeter();
+            setDictadoUi(false, '');
+            initFileProtocolWarning();
+            showValidation(
+              'error',
+              'Estás abriendo el archivo de forma local. Ábrelo en http://127.0.0.1:8765/ (python3 server.py).'
+            );
+            return;
+          }
+          window.setTimeout(function () {
+            if (!voiceWanted || !voiceRec) return;
+            try {
+              console.log('[dictado] reanudando start() (permiso ya concedido)');
+              voiceRec.start();
+            } catch (err) {
+              console.log('[dictado] reanudar error:', err && err.name);
+              if (err && err.name === 'InvalidStateError') return;
+              voiceWanted = false;
+              voiceListening = false;
+              setDictadoUi(false, '');
+              showValidation(
+                'error',
+                'El dictado se detuvo. Toca Dictar pedido para continuar.'
+              );
+            }
+          }, 280);
+        };
+
+        return voiceRec;
+      }
+
+      function normalizeVoiceText(raw) {
+        if (window.KantekVoiceOrder && window.KantekVoiceOrder.normalizeVoiceText) {
+          return window.KantekVoiceOrder.normalizeVoiceText(raw);
+        }
+        return String(raw || '')
+          .toLowerCase()
+          .replace(/\s+/g, ' ')
+          .trim();
+      }
+
+      function availableKgForProduct(product) {
+        const found = [];
+        inputs.forEach(function (input) {
+          if (input.dataset.product !== product) return;
+          const kg = parseFloat(input.dataset.kg);
+          if (!isNaN(kg)) found.push(kg);
+        });
+        return found;
+      }
+
+      function resolveSpokenKg(product, spokenKg) {
+        const available = availableKgForProduct(product);
+        if (spokenKg == null || isNaN(spokenKg)) {
+          return available.length === 1 ? available[0] : null;
+        }
+        for (let i = 0; i < available.length; i++) {
+          if (Math.abs(available[i] - spokenKg) < 0.08) return available[i];
+        }
+        if (
+          (spokenKg === 15 || spokenKg === 150 || spokenKg === 1) &&
+          available.indexOf(1.5) !== -1
+        ) {
+          return 1.5;
+        }
+        return null;
+      }
+
+      function findSkuInput(product, kg) {
+        let match = null;
+        inputs.forEach(function (input) {
+          if (input.dataset.product !== product) return;
+          const inputKg = parseFloat(input.dataset.kg);
+          if (!isNaN(inputKg) && Math.abs(inputKg - kg) < 0.05) match = input;
+        });
+        return match;
+      }
+
+      function parseVoiceOrder(transcript) {
+        const text = normalizeVoiceText(transcript);
+        console.log('[dictado] parse «' + transcript + '» → «' + text + '»');
+        if (!window.KantekVoiceOrder || !window.KantekVoiceOrder.parseVoiceOrder) {
+          return [];
+        }
+        return window.KantekVoiceOrder.parseVoiceOrder(transcript, {
+          availableKg: availableKgForProduct,
+        });
+      }
+
+      function consumeVoiceTranscript(raw) {
+        const key = normalizeVoiceText(raw);
+        if (!key) return;
+        if (voiceProcessed[key]) {
+          console.log('[dictado] ya procesado:', key);
+          return;
+        }
+        voiceProcessed[key] = true;
+        const items = parseVoiceOrder(raw);
+        console.log('[dictado] items:', items);
+        const result = applyVoiceItems(items);
+        refreshVoiceFeedback(raw, result);
+      }
+
+      function refreshVoiceFeedback(heard, result) {
+        const live = document.getElementById('dictado-live');
+        if (live && heard) {
+          live.hidden = false;
+          live.textContent = 'Escuché: “' + heard.trim() + '”';
+        }
+        const box = document.getElementById('dictado-resumen');
+        if (!box) return;
+        box.hidden = false;
+        if (result && result.added.length) {
+          box.textContent =
+            'Quedó ' +
+            result.added.join(', ') +
+            '. Si algo salió mal, corrige las cantidades en las cajas.';
+        } else if (result && result.skipped.length) {
+          box.textContent =
+            'Escuché el pedido, pero no encontré: ' +
+            result.skipped.join(', ') +
+            '. Prueba decir p. ej. “Cachorro 2 kg 5 piezas, 8 kg 2”.';
+        } else {
+          box.textContent =
+            'No entendí un producto y presentación. Prueba: “Cachorro 2 kg 5 piezas, 8 kg 2” o “8 de felinos 1.5”.';
+        }
+      }
+
+      function applyVoiceItems(items) {
+        const added = [];
+        const skipped = [];
+        items.forEach(function (item) {
+          const kg = resolveSpokenKg(item.product, item.kgSpoken);
+          if (kg == null) {
+            skipped.push(
+              item.label +
+                (item.kgSpoken != null ? ' ' + item.kgSpoken + ' kg' : '')
+            );
+            voiceSessionSkipped.push(skipped[skipped.length - 1]);
+            return;
+          }
+          const input = findSkuInput(item.product, kg);
+          if (!input) {
+            skipped.push(item.label + ' ' + kg + ' kg');
+            voiceSessionSkipped.push(item.label + ' ' + kg + ' kg');
+            return;
+          }
+          input.value = Math.max(0, Math.round(item.qty));
+          added.push(item.qty + ' de ' + item.label + ' ' + kg + ' kg');
+          voiceSessionAdds.push(item.qty + ' de ' + item.label + ' ' + kg + ' kg');
+        });
+        if (added.length) {
+          updateTotal();
+          showValidation('ok', 'Quedó ' + added.join(', '));
+        }
+        return { added: added, skipped: skipped };
+      }
+
+      function resetVoiceBars() {
+        document.querySelectorAll('.btn-dictar__eq span').forEach(function (bar) {
+          bar.style.transform = 'scaleY(0.18)';
+        });
+      }
+
+      function stopVoiceMeter() {
+        if (voiceEqRaf) {
+          window.cancelAnimationFrame(voiceEqRaf);
+          voiceEqRaf = 0;
+        }
+        resetVoiceBars();
+        if (voiceMicStream) {
+          voiceMicStream.getTracks().forEach(function (track) {
+            track.stop();
+          });
+          voiceMicStream = null;
+        }
+        if (voiceAudioCtx) {
+          try {
+            voiceAudioCtx.close();
+          } catch (err) {
+            /* ignore */
+          }
+          voiceAudioCtx = null;
+        }
+        voiceAnalyser = null;
+      }
+
+      async function startVoiceMeter() {
+        if (voiceEqRaf || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          return;
+        }
+        const bars = document.querySelectorAll('.btn-dictar__eq span');
+        if (!bars.length) return;
+        try {
+          voiceMicStream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+            video: false,
+          });
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (!AC) return;
+          voiceAudioCtx = new AC();
+          if (voiceAudioCtx.state === 'suspended') {
+            await voiceAudioCtx.resume();
+          }
+          const source = voiceAudioCtx.createMediaStreamSource(voiceMicStream);
+          voiceAnalyser = voiceAudioCtx.createAnalyser();
+          voiceAnalyser.fftSize = 256;
+          voiceAnalyser.smoothingTimeConstant = 0.72;
+          source.connect(voiceAnalyser);
+          const bins = new Uint8Array(voiceAnalyser.frequencyBinCount);
+          const n = bars.length;
+          const slice = Math.max(1, Math.floor(bins.length / (n + 4)));
+
+          function tick() {
+            if (!voiceWanted || !voiceAnalyser) {
+              voiceEqRaf = 0;
+              return;
+            }
+            voiceAnalyser.getByteFrequencyData(bins);
+            for (let i = 0; i < n; i++) {
+              let sum = 0;
+              const start = i * slice + 2;
+              for (let j = 0; j < slice; j++) {
+                sum += bins[start + j] || 0;
+              }
+              const avg = sum / slice / 255;
+              const level =
+                avg < 0.055 ? 0.16 : Math.min(1, 0.16 + (avg - 0.055) * 1.85);
+              bars[i].style.transform = 'scaleY(' + level.toFixed(3) + ')';
+            }
+            voiceEqRaf = window.requestAnimationFrame(tick);
+          }
+          voiceEqRaf = window.requestAnimationFrame(tick);
+        } catch (err) {
+          console.log('[dictado] medidor de voz no disponible:', err);
+        }
+      }
+
+      function showHeardText(text) {
+        const live = document.getElementById('dictado-live');
+        const liveText = document.getElementById('dictado-live-text');
+        if (!live || !liveText) return;
+        live.hidden = false;
+        liveText.textContent = text && String(text).trim() ? String(text).trim() : '…';
+      }
+
+      function setDictadoUi(listening, liveText) {
+        const btn = document.getElementById('btn-dictar');
+        const label = document.getElementById('btn-dictar-label');
+        const live = document.getElementById('dictado-live');
+        if (btn) {
+          btn.classList.toggle('is-listening', !!listening);
+          btn.setAttribute('aria-pressed', listening ? 'true' : 'false');
+        }
+        if (label) label.textContent = listening ? 'Escuchando...' : 'Dictar pedido';
+        if (listening) {
+          if (live) live.hidden = false;
+          if (liveText) showHeardText(liveText);
+        }
+      }
+
+      function showVoiceSummary() {
+        const box = document.getElementById('dictado-resumen');
+        if (!box) return;
+        box.hidden = false;
+        if (!voiceSessionAdds.length) {
+          box.textContent =
+            'No se reconoció ningún producto. Puedes corregir las cantidades a mano o volver a dictar.';
+          return;
+        }
+        var text =
+          'Quedó: ' +
+          voiceSessionAdds.join(', ') +
+          '. Si algo salió mal, corrige las cantidades en las cajas.';
+        if (voiceSessionSkipped.length) {
+          text += ' No encontré: ' + voiceSessionSkipped.join(', ') + '.';
+        }
+        box.textContent = text;
+      }
+
+      function stopVoiceDictation(fromUser) {
+        console.log('[dictado] stop', { fromUser: fromUser });
+        if (voiceLastInterim) {
+          consumeVoiceTranscript(voiceLastInterim);
+          voiceLastInterim = '';
+        }
+        voiceWanted = false;
+        voiceListening = false;
+        voiceStarting = false;
+        stopVoiceMeter();
+        setDictadoUi(false, '');
+        if (voiceRec) {
+          try {
+            voiceRec.stop();
+          } catch (err) {
+            console.log('[dictado] stop ignorado:', err && err.name);
+          }
+        }
+        if (fromUser) showVoiceSummary();
+      }
+
+      async function startVoiceDictation() {
+        if (voiceListening || voiceStarting) {
+          console.log('[dictado] start ignorado: ya está activo');
+          return;
+        }
+        if (isFileProtocol()) {
+          initFileProtocolWarning();
+          showValidation(
+            'error',
+            'Estás en file://. El micrófono no funciona así. Ejecuta python3 server.py y abre http://127.0.0.1:8765/'
+          );
+          return;
+        }
+        if (!VoiceRecCtor) {
+          showValidation(
+            'error',
+            'Este navegador no soporta dictado por voz. Prueba en Chrome o Safari.'
+          );
+          return;
+        }
+
+        voiceStarting = true;
+        console.log('[dictado] preparando inicio protocol=', location.protocol);
+        const allowed = await ensureMicGranted();
+        if (!allowed) {
+          console.log('[dictado] no se llama start(): permiso no concedido');
+          voiceStarting = false;
+          return;
+        }
+
+        voiceSessionAdds = [];
+        voiceSessionSkipped = [];
+        voiceProcessed = {};
+        voiceLastInterim = '';
+        const resumen = document.getElementById('dictado-resumen');
+        if (resumen) {
+          resumen.hidden = true;
+          resumen.textContent = '';
+        }
+
+        const rec = initVoiceRecognition();
+        if (!rec) {
+          voiceStarting = false;
+          showValidation('error', 'No se pudo iniciar el dictado.');
+          return;
+        }
+
+        voiceWanted = true;
+        setDictadoUi(true, '');
+        showHeardText('Permiso OK. Llamando start()…');
+        console.log('[dictado] permiso listo, llamando recognition.start()');
+        try {
+          rec.start();
+          console.log('[dictado] recognition.start() ejecutado');
+          showHeardText('start() ejecutado. Esperando onstart/onresult…');
+          window.setTimeout(function () {
+            if (voiceWanted) startVoiceMeter();
+          }, 1200);
+        } catch (errStart) {
+          console.log('[dictado] start error:', errStart);
+          voiceStarting = false;
+          if (errStart && errStart.name === 'InvalidStateError') {
+            voiceListening = true;
+            setDictadoUi(true, '');
+            startVoiceMeter();
+            return;
+          }
+          voiceWanted = false;
+          stopVoiceMeter();
+          setDictadoUi(false, '');
+          showValidation(
+            'error',
+            isFileProtocol()
+              ? 'Estás abriendo el archivo de forma local. Ábrelo en http://127.0.0.1:8765/ (python3 server.py).'
+              : 'No se pudo iniciar el dictado. Inténtalo de nuevo.'
+          );
+          return;
+        }
+      }
+
+      function toggleVoiceDictation() {
+        if (voiceListening || voiceStarting || voiceWanted) {
+          stopVoiceDictation(true);
+        } else {
+          startVoiceDictation();
+        }
+      }
+
+      function clearAll() {
+        inputs.forEach(function (input) {
+          input.value = 0;
+        });
+        updateTotal();
+      }
+
+      var BTN_BORRAR_LABEL = 'BORRAR TODO';
+      var BTN_BORRAR_CONFIRM = '¿SEGURO QUE BORRAR?';
+      var borrarConfirming = false;
+
+      function resetBorrarConfirm() {
+        borrarConfirming = false;
+        if (!btnBorrar) return;
+        btnBorrar.textContent = BTN_BORRAR_LABEL;
+        btnBorrar.classList.remove('btn-borrar--confirm');
+        btnBorrar.setAttribute('aria-label', BTN_BORRAR_LABEL);
+      }
+
+      function onBorrarClick() {
+        if (!btnBorrar) return;
+        if (!borrarConfirming) {
+          borrarConfirming = true;
+          btnBorrar.textContent = BTN_BORRAR_CONFIRM;
+          btnBorrar.classList.add('btn-borrar--confirm');
+          btnBorrar.setAttribute('aria-label', BTN_BORRAR_CONFIRM);
+          return;
+        }
+        clearAll();
+        resetBorrarConfirm();
+      }
+
+      function selectQtyText(input) {
+        if (!input) return;
+        try {
+          input.select();
+        } catch (err) {
+          /* algunos navegadores limitan select() en type=number */
+        }
+        try {
+          if (typeof input.setSelectionRange === 'function') {
+            const len = String(input.value == null ? '' : input.value).length;
+            input.setSelectionRange(0, len);
+          }
+        } catch (err) {
+          /* setSelectionRange puede fallar en type=number (p. ej. Chrome) */
+        }
+      }
+
+      function bindSelectAllOnFocus(input) {
+        input.addEventListener('focus', function () {
+          input.classList.add('is-focused');
+          requestAnimationFrame(function () {
+            selectQtyText(input);
+            window.setTimeout(function () {
+              selectQtyText(input);
+            }, 0);
+          });
+        });
+
+        input.addEventListener('blur', function () {
+          input.classList.remove('is-focused');
+        });
+
+        input.addEventListener('mouseup', function (e) {
+          e.preventDefault();
+        });
+
+        input.addEventListener(
+          'touchend',
+          function () {
+            window.setTimeout(function () {
+              selectQtyText(input);
+            }, 0);
+          },
+          { passive: true }
+        );
+      }
+
+      function bindQtyArrowKeys(input) {
+        input.addEventListener('keydown', function (e) {
+          if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+          e.preventDefault();
+          const step = e.shiftKey ? 10 : 1;
+          const delta = e.key === 'ArrowUp' ? step : -step;
+          adjustQty(input, delta);
+          selectQtyText(input);
+        });
+      }
+
+      inputs.forEach(function (input) {
+        bindSelectAllOnFocus(input);
+        bindQtyArrowKeys(input);
+        input.addEventListener('input', updateTotal);
+        input.addEventListener('change', function () {
+          normalizeValue(input);
+          updateTotal();
+        });
+      });
+
+      document.querySelectorAll('.presentacion').forEach(function (row) {
+        const input = row.querySelector('input[type="number"]');
+        const minus = row.querySelector('.btn-minus');
+        const plus = row.querySelector('.btn-plus');
+        if (!input || !minus || !plus) return;
+
+        minus.addEventListener('click', function () {
+          adjustQty(input, -1);
+        });
+        plus.addEventListener('click', function () {
+          adjustQty(input, 1);
+        });
+      });
+
+      function initPrecioLabels() {
+        document.querySelectorAll('.presentacion').forEach(function (row) {
+          const input = row.querySelector('input[data-price]');
+          const priceEl = row.querySelector('.presentacion-precio');
+          if (!input || !priceEl) return;
+          const price = parseFloat(input.dataset.price);
+          if (!isNaN(price)) priceEl.textContent = formatMoney(price);
+        });
+      }
+
+      initAccordion();
+      initEstadoSelect();
+      initMontoStatusToggle();
+      initPrecioLabels();
+      initTestModeSwitch();
+      initFileProtocolWarning();
+      initVoiceRecognition();
+
+      const btnDictar = document.getElementById('btn-dictar');
+      if (btnDictar) {
+        btnDictar.addEventListener('click', function () {
+          toggleVoiceDictation();
+        });
+      }
+
+      if (msgEl) {
+        msgEl.addEventListener('click', function () {
+          clearValidationMessage();
+        });
+      }
+
+      if (btnBorrar) {
+        btnBorrar.addEventListener('click', onBorrarClick);
+      }
+
+      document.addEventListener('click', function (e) {
+        if (!borrarConfirming || !btnBorrar) return;
+        if (btnBorrar.contains(e.target)) return;
+        resetBorrarConfirm();
+      });
+
+      if (btnCargar) {
+        btnCargar.addEventListener('click', startTransferFlow);
+      }
+
+      const btnPagaAhora = document.getElementById('btn-paga-ahora');
+      const btnPagaDespues = document.getElementById('btn-paga-despues');
+      const btnModalVolver = document.getElementById('btn-modal-volver');
+      const btnLlaveroOk = document.getElementById('btn-llavero-ok');
+      const btnQr = document.getElementById('btn-qr');
+
+      if (btnPagaAhora) {
+        btnPagaAhora.addEventListener('click', function () {
+          choosePago('ahora');
+        });
+      }
+      if (btnPagaDespues) {
+        btnPagaDespues.addEventListener('click', function () {
+          choosePago('despues');
+        });
+      }
+      if (btnModalSi) {
+        btnModalSi.addEventListener('click', function () {
+          confirmTransfer();
+        });
+      }
+      if (btnModalVolver) {
+        btnModalVolver.addEventListener('click', function () {
+          showModalStep('step-pago');
+        });
+      }
+      if (btnLlaveroOk) {
+        btnLlaveroOk.addEventListener('click', function () {
+          finishTransfer();
+        });
+      }
+      if (btnQr) {
+        btnQr.addEventListener('click', function () {
+          openQrScanner();
+        });
+      }
+
+      const qrModal = document.getElementById('modal-qr');
+      const btnQrFile = document.getElementById('btn-qr-file');
+      const qrFileInput = document.getElementById('qr-file-input');
+      if (qrModal) {
+        qrModal.querySelectorAll('[data-qr-close]').forEach(function (node) {
+          node.addEventListener('click', function () {
+            closeQrScanner();
+          });
+        });
+      }
+      if (btnQrFile && qrFileInput) {
+        btnQrFile.addEventListener('click', function () {
+          qrFileInput.click();
+        });
+        qrFileInput.addEventListener('change', function () {
+          const file = qrFileInput.files && qrFileInput.files[0];
+          qrFileInput.value = '';
+          if (file) scanQrFile(file);
+        });
+      }
+
+      if (modal) {
+        modal.querySelectorAll('[data-modal-close]').forEach(function (node) {
+          node.addEventListener('click', closeModal);
+        });
+      }
+
+      function getTabStops() {
+        const pedidoOpen = document.getElementById('box-pedido');
+        if (!pedidoOpen || !pedidoOpen.classList.contains('is-open')) return [];
+        const stops = Array.prototype.slice.call(inputs);
+        if (btnCargar) stops.push(btnCargar);
+        if (btnBorrar) stops.push(btnBorrar);
+        return stops;
+      }
+
+      function focusTabStop(node) {
+        if (!node) return;
+        node.focus();
+        if (node.tagName === 'INPUT' && typeof node.select === 'function') {
+          node.select();
+        }
+      }
+
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !e.shiftKey) {
+          const modalPin = document.getElementById('modal-pin');
+          if (modalPin && !modalPin.hidden) {
+            closeTestModePinModal();
+            return;
+          }
+          if (qrModal && !qrModal.hidden) {
+            closeQrScanner();
+            return;
+          }
+          if (modal && !modal.hidden) {
+            closeModal();
+            return;
+          }
+        }
+
+        if (e.key === 'Escape' && e.shiftKey) {
+          if (modal && !modal.hidden) return;
+          e.preventDefault();
+          onBorrarClick();
+          return;
+        }
+
+        if (e.key === 'Enter' && e.shiftKey) {
+          if (modal && !modal.hidden) return;
+          e.preventDefault();
+          if (typeof openModal === 'function') openModal();
+          return;
+        }
+
+        if (e.key !== 'Tab') return;
+        if (modal && !modal.hidden) return;
+
+        const stops = getTabStops();
+        if (!stops.length) return;
+
+        const active = document.activeElement;
+        let idx = stops.indexOf(active);
+
+        if (
+          idx === -1 &&
+          active &&
+          active.classList &&
+          active.classList.contains('btn-qty')
+        ) {
+          const row = active.closest('.qty-controls');
+          const input = row ? row.querySelector('input[type="number"]') : null;
+          idx = input ? stops.indexOf(input) : -1;
+          if (idx === -1) {
+            e.preventDefault();
+            focusTabStop(stops[0]);
+            return;
+          }
+        }
+
+        if (idx === -1) {
+          e.preventDefault();
+          focusTabStop(e.shiftKey ? stops[stops.length - 1] : stops[0]);
+          return;
+        }
+
+        e.preventDefault();
+        const nextIdx = e.shiftKey
+          ? (idx - 1 + stops.length) % stops.length
+          : (idx + 1) % stops.length;
+        focusTabStop(stops[nextIdx]);
+      });
+
+      updateTotal();
+    })();
+  </script>
+</body>
+</html>
