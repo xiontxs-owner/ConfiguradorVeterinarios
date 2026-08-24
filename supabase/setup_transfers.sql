@@ -10,6 +10,12 @@ alter table public.transfers
 alter table public.transfers
   add column if not exists distribuidor_otro text;
 
+alter table public.transfers
+  add column if not exists firma text;
+
+alter table public.transfers
+  add column if not exists firma_at timestamptz;
+
 alter table public.transfers enable row level security;
 
 drop policy if exists "transfers_insert_anon" on public.transfers;

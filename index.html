@@ -511,7 +511,10 @@
     </div>
 
     <div class="sidebar-actions">
-      <button type="button" class="btn-cargar" id="btn-cargar">CREAR TRANSFER</button>
+      <p id="minimo-transfer" class="minimo-transfer">Pedido mínimo $1,000.00 MXN</p>
+      <button type="button" class="btn-cargar" id="btn-cargar" disabled>
+        CREAR TRANSFER
+      </button>
       <button type="button" class="btn-borrar" id="btn-borrar">BORRAR TODO</button>
     </div>
     </aside>
@@ -572,6 +575,50 @@
         <div class="modal__actions">
           <button type="button" class="btn-modal btn-modal--confirm" id="btn-llavero-ok">
             Continuar
+          </button>
+        </div>
+      </div>
+
+      <div id="step-firma" class="modal-step firma-step" hidden>
+        <h2 class="modal__title modal__title--firma">
+          Confirmación y cierre de pedido – Beneficios CVDL
+        </h2>
+        <div class="firma-legal">
+          <p>Este pedido se levantó durante el CVDL e incluye los beneficios y condiciones especiales del evento.</p>
+          <p>Al firmar, el pedido queda levantado, confirmado y cerrado.</p>
+          <p class="firma-legal__alert">No podrá modificarse, sustituirse ni complementarse después.</p>
+          <p>Con mi firma confirmo que:</p>
+          <ul>
+            <li>Revisé y estoy de acuerdo con los productos, cantidades y condiciones del pedido.</li>
+            <li>Yo realicé y autoricé este pedido.</li>
+            <li>Acepto los beneficios y condiciones aplicables al momento de su registro.</li>
+            <li>Entiendo que, una vez firmado, no se pueden agregar productos ni hacer cambios.</li>
+            <li>Cualquier producto adicional deberá solicitarse en un nuevo pedido independiente, sujeto a las condiciones vigentes en ese momento (sin garantizar los beneficios del CVDL).</li>
+          </ul>
+          <p class="firma-legal__decl-label">Declaración:</p>
+          <p>He revisado y acepto el contenido de este pedido y las condiciones anteriores.</p>
+        </div>
+        <div class="firma-sign">
+          <div class="firma-sign__head">
+            <label class="firma-sign__label" for="firma-canvas">Firma del cliente</label>
+            <span class="firma-sign__hint">Firme con el dedo o el mouse</span>
+          </div>
+          <div class="firma-pad-frame" id="firma-pad-frame">
+            <canvas id="firma-canvas" width="640" height="220" tabindex="0" aria-label="Área de firma del cliente"></canvas>
+          </div>
+          <p id="firma-error" class="firma-error" role="alert" hidden></p>
+        </div>
+        <div class="modal__actions firma-actions">
+          <button type="button" class="btn-modal btn-modal--alt" id="btn-firma-limpiar">
+            Limpiar firma
+          </button>
+          <button
+            type="button"
+            class="btn-modal btn-modal--confirm btn-modal--lg"
+            id="btn-firma-confirmar"
+            disabled
+          >
+            Confirmar y crear TRANSFER
           </button>
         </div>
       </div>
@@ -661,6 +708,10 @@
 
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <script
+    src="https://cdn.jsdelivr.net/npm/signature_pad@4.2.0/dist/signature_pad.umd.min.js"
+    onerror="this.onerror=null;this.src='https://unpkg.com/signature_pad@4.2.0/dist/signature_pad.umd.min.js';"
+  ></script>
+  <script
     src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"
     onerror="this.onerror=null;this.src='https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';"
   ></script>
@@ -741,6 +792,8 @@
 
       const DESCUENTO_PCT = 0.15;
       const LLAVERO_CADA_MXN = 2000;
+      const MIN_TRANSFER_MXN = 1000;
+      const ALERT_DURATION_MS = 10000;
       const ESTADOS_MX = [
         'Aguascalientes',
         'Baja California',
@@ -885,6 +938,33 @@
       function getOrderTotal() {
         const products = getProductTotal();
         return roundMoney(products - getDiscountAmount(products));
+      }
+
+      function meetsMinTransfer(total) {
+        const amount = total == null ? getOrderTotal() : Number(total);
+        return roundMoney(amount) >= MIN_TRANSFER_MXN;
+      }
+
+      function updateCrearTransferButton() {
+        if (!btnCargar) return;
+        const total = getOrderTotal();
+        const ok = meetsMinTransfer(total);
+        btnCargar.disabled = !ok;
+        btnCargar.setAttribute('aria-disabled', ok ? 'false' : 'true');
+        btnCargar.title = ok
+          ? 'Crear TRANSFER'
+          : 'El pedido mínimo es ' + formatMoney(MIN_TRANSFER_MXN);
+        const hint = document.getElementById('minimo-transfer');
+        if (hint) {
+          hint.hidden = ok;
+          if (!ok) {
+            const faltan = roundMoney(Math.max(0, MIN_TRANSFER_MXN - total));
+            hint.textContent =
+              'Pedido mínimo ' +
+              formatMoney(MIN_TRANSFER_MXN) +
+              (total > 0 ? ' · Faltan ' + formatMoney(faltan) : '');
+          }
+        }
       }
 
       function getOrderLines() {
@@ -1111,7 +1191,7 @@
         if (totalMoneyEl) totalMoneyEl.textContent = money;
         if (kgChanged || moneyChanged) flashTotal();
         updateMontoBreakdown();
-        clearValidationMessage();
+        updateCrearTransferButton();
       }
 
       var pedidoSnapshot = null;
@@ -1131,12 +1211,22 @@
       }
 
       var transferDraft = null;
+      var signaturePad = null;
+      var signaturePadInitTimer = 0;
+      var transferCreating = false;
 
       function showModalStep(stepId) {
         if (!modal) return;
         modal.querySelectorAll('.modal-step').forEach(function (step) {
           step.hidden = step.id !== stepId;
         });
+        const panel = modal.querySelector('.modal__panel--transfer');
+        if (panel) {
+          panel.classList.toggle('modal__panel--firma', stepId === 'step-firma');
+        }
+        if (stepId !== 'step-firma') {
+          teardownSignaturePad();
+        }
       }
 
       function openAccordion(name) {
@@ -1831,7 +1921,7 @@
         );
         validationHideTimer = window.setTimeout(function () {
           clearValidationMessage();
-        }, 6000);
+        }, ALERT_DURATION_MS);
       }
 
       function validateClienteForm() {
@@ -1930,6 +2020,21 @@
           showValidation('error', 'Agrega al menos un producto para crear el transfer.');
           return;
         }
+        if (!meetsMinTransfer(pedidoSnapshot.orderTotal)) {
+          openAccordion('pedido');
+          const faltan = roundMoney(
+            Math.max(0, MIN_TRANSFER_MXN - Number(pedidoSnapshot.orderTotal || 0))
+          );
+          showValidation(
+            'error',
+            'El pedido mínimo es ' +
+              formatMoney(MIN_TRANSFER_MXN) +
+              '. Faltan ' +
+              formatMoney(faltan) +
+              '.'
+          );
+          return;
+        }
         transferDraft = {
           cliente: cliente.data,
           pedido: pedidoSnapshot,
@@ -1950,6 +2055,10 @@
 
       function closeModal() {
         if (!modal) return;
+        teardownSignaturePad();
+        clearFirmaError();
+        resetFirmaConfirmButton();
+        transferCreating = false;
         modal.hidden = true;
         document.body.classList.remove('modal-open');
         showModalStep('step-pago');
@@ -2308,6 +2417,8 @@
           ['Descuento 15%', pedido.discount || 0],
           ['Monto total', record.montoTotal || pedido.orderTotal || 0],
           ['Kilogramos totales', pedido.totalKg || 0],
+          ['Firma del cliente', record.firma ? 'Firmado' : ''],
+          ['Fecha de firma', record.firmaAt ? formatFechaHora(record.firmaAt) : ''],
         ];
 
         const productoRows = [
@@ -2355,9 +2466,34 @@
           { wch: 14 },
         ];
 
+        const firmaRows = [
+          ['Campo', 'Valor'],
+          ['Firma del cliente', record.firma ? 'Firmado' : ''],
+          [
+            'Fecha de firma',
+            record.firmaAt ? formatFechaHora(record.firmaAt) : '',
+          ],
+          ['Formato', 'image/png base64 (data URL)'],
+        ];
+        const firmaChunks = splitExcelCell(record.firma || '');
+        if (!firmaChunks.length) {
+          firmaRows.push(['Firma (base64)', '']);
+        } else {
+          firmaChunks.forEach(function (chunk, index) {
+            const label =
+              firmaChunks.length === 1
+                ? 'Firma (base64)'
+                : 'Firma (base64) parte ' + (index + 1);
+            firmaRows.push([label, chunk]);
+          });
+        }
+
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen');
         XLSX.utils.book_append_sheet(wb, wsProductos, 'Productos');
+        const wsFirma = XLSX.utils.aoa_to_sheet(firmaRows);
+        wsFirma['!cols'] = [{ wch: 28 }, { wch: 80 }];
+        XLSX.utils.book_append_sheet(wb, wsFirma, 'Firma');
         return wb;
       }
 
@@ -2529,6 +2665,8 @@
           monto_total: Number(record.montoTotal) || 0,
           productos: record.productos || [],
           es_prueba: !!record.prueba,
+          firma: record.firma || '',
+          firma_at: record.firmaAt || record.createdAt || new Date().toISOString(),
         };
       }
 
@@ -2559,12 +2697,10 @@
           }
           const row = mapRecordToSupabaseRow(record);
           let payload = row;
-          for (let attempt = 0; attempt < 6; attempt++) {
+          for (let attempt = 0; attempt < 16; attempt++) {
             const { error } = await client.from('transfers').insert([payload]);
             if (!error) return { ok: true };
-            const missing = /Could not find the '([^']+)' column/.exec(
-              error.message || ''
-            );
+            const missing = /'([^']+)' column/.exec(error.message || '');
             if (missing && missing[1] && payload[missing[1]] !== undefined) {
               const next = {};
               Object.keys(payload).forEach(function (key) {
@@ -2601,6 +2737,13 @@
         return record;
       }
 
+      function isTransferCompleteSuccess(record) {
+        if (!record || !record.folio) return false;
+        if (!record.supabaseOk) return false;
+        if (record.prueba) return true;
+        return !!record.emailOk;
+      }
+
       function buildTransferRecord(draft) {
         const now = new Date();
         const pagoAhora = draft.pago === 'ahora';
@@ -2618,7 +2761,191 @@
           pago: draft.pago,
           llaveros: pagoAhora ? llaverosPorMonto(total) : 0,
           prueba: isTestMode(),
+          firma: draft.firma || '',
+          firmaAt: draft.firmaAt || '',
         };
+      }
+
+      function getSignaturePadCtor() {
+        const Ctor = window.SignaturePad;
+        if (typeof Ctor === 'function') return Ctor;
+        if (Ctor && typeof Ctor.default === 'function') return Ctor.default;
+        return null;
+      }
+
+      function splitExcelCell(value) {
+        const text = String(value || '');
+        if (!text) return [];
+        const max = 32000;
+        if (text.length <= max) return [text];
+        const chunks = [];
+        for (let i = 0; i < text.length; i += max) {
+          chunks.push(text.slice(i, i + max));
+        }
+        return chunks;
+      }
+
+      function showFirmaError(text) {
+        const elErr = document.getElementById('firma-error');
+        if (!elErr) return;
+        elErr.hidden = !text;
+        elErr.textContent = text || '';
+      }
+
+      function clearFirmaError() {
+        showFirmaError('');
+      }
+
+      function resetFirmaConfirmButton() {
+        const btn = document.getElementById('btn-firma-confirmar');
+        if (!btn) return;
+        btn.textContent = 'Confirmar y crear TRANSFER';
+        updateFirmaConfirmState();
+      }
+
+      function isFirmaDrawn() {
+        return !!(signaturePad && !signaturePad.isEmpty());
+      }
+
+      function updateFirmaConfirmState() {
+        const btn = document.getElementById('btn-firma-confirmar');
+        if (!btn) return;
+        const ok = isFirmaDrawn() && !transferCreating;
+        btn.disabled = !ok;
+        if (ok) clearFirmaError();
+      }
+
+      function teardownSignaturePad() {
+        if (signaturePadInitTimer) {
+          window.clearTimeout(signaturePadInitTimer);
+          signaturePadInitTimer = 0;
+        }
+        if (signaturePad) {
+          if (typeof signaturePad.off === 'function') signaturePad.off();
+          signaturePad = null;
+        }
+      }
+
+      function resizeSignatureCanvas(canvas) {
+        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+        const rect = canvas.getBoundingClientRect();
+        const width = Math.max(Math.floor(rect.width), 1);
+        const height = Math.max(Math.floor(rect.height), 1);
+        canvas.width = Math.floor(width * ratio);
+        canvas.height = Math.floor(height * ratio);
+        const ctx = canvas.getContext('2d');
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.scale(ratio, ratio);
+      }
+
+      function bindSignaturePadEvents(pad) {
+        if (!pad) return;
+        const onEnd = function () {
+          updateFirmaConfirmState();
+        };
+        if (typeof pad.addEventListener === 'function') {
+          pad.addEventListener('endStroke', onEnd);
+          return;
+        }
+        const prev = pad.onEnd;
+        pad.onEnd = function () {
+          if (typeof prev === 'function') prev.apply(pad, arguments);
+          onEnd();
+        };
+      }
+
+      function initSignaturePad() {
+        const canvas = document.getElementById('firma-canvas');
+        const Ctor = getSignaturePadCtor();
+        if (!canvas) return false;
+        if (!Ctor) return false;
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width < 2 || rect.height < 2) return false;
+        teardownSignaturePad();
+        resizeSignatureCanvas(canvas);
+        signaturePad = new Ctor(canvas, {
+          minWidth: 1.2,
+          maxWidth: 2.8,
+          throttle: 8,
+          minDistance: 2,
+          penColor: 'rgb(1, 27, 43)',
+          backgroundColor: 'rgb(255, 255, 255)',
+        });
+        bindSignaturePadEvents(signaturePad);
+        updateFirmaConfirmState();
+        return true;
+      }
+
+      function openFirmaStep(tries) {
+        if (!transferDraft) return;
+        showModalStep('step-firma');
+        clearFirmaError();
+        const attempt = tries || 0;
+        window.requestAnimationFrame(function () {
+          if (initSignaturePad()) {
+            return;
+          }
+          if (attempt < 20) {
+            signaturePadInitTimer = window.setTimeout(function () {
+              openFirmaStep(attempt + 1);
+            }, 100);
+            return;
+          }
+          showFirmaError(
+            'No se pudo cargar el área de firma. Revisa tu conexión e inténtalo de nuevo.'
+          );
+          updateFirmaConfirmState();
+        });
+      }
+
+      function onFirmaViewportChange() {
+        const step = document.getElementById('step-firma');
+        if (!step || step.hidden) return;
+        const data = signaturePad && typeof signaturePad.toData === 'function'
+          ? signaturePad.toData()
+          : null;
+        if (!initSignaturePad()) return;
+        if (data && data.length && signaturePad && typeof signaturePad.fromData === 'function') {
+          signaturePad.fromData(data);
+          updateFirmaConfirmState();
+        }
+      }
+
+      function clearClienteFirma() {
+        if (signaturePad) signaturePad.clear();
+        if (transferDraft) {
+          transferDraft.firma = '';
+          transferDraft.firmaAt = '';
+        }
+        clearFirmaError();
+        updateFirmaConfirmState();
+      }
+
+      async function confirmFirmaAndCreate() {
+        if (!transferDraft || transferCreating) return;
+        if (!isFirmaDrawn()) {
+          showFirmaError(
+            'La firma es obligatoria. El cliente debe firmar para cerrar el pedido.'
+          );
+          updateFirmaConfirmState();
+          return;
+        }
+        transferDraft.firma = signaturePad.toDataURL('image/png');
+        transferDraft.firmaAt = new Date().toISOString();
+        clearFirmaError();
+        transferCreating = true;
+        const btn = document.getElementById('btn-firma-confirmar');
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = 'Creando TRANSFER…';
+        }
+        try {
+          await finishTransfer();
+        } finally {
+          transferCreating = false;
+          const step = document.getElementById('step-firma');
+          if (step && !step.hidden) resetFirmaConfirmButton();
+        }
       }
 
       async function confirmTransfer() {
@@ -2635,11 +2962,18 @@
           if (ok) ok.focus();
           return;
         }
-        await finishTransfer();
+        openFirmaStep();
       }
 
       async function finishTransfer() {
         if (!transferDraft) return;
+        if (!transferDraft.firma) {
+          openFirmaStep();
+          showFirmaError(
+            'La firma es obligatoria. El cliente debe firmar para cerrar el pedido.'
+          );
+          return;
+        }
         const record = buildTransferRecord(transferDraft);
         try {
           await persistTransfer(record);
@@ -2679,9 +3013,17 @@
             el('strong', '', record.prueba ? 'Prueba' : 'Real')
           );
           extra.insertBefore(pModo, pFolio.nextSibling);
+          if (record.firma) {
+            const pFirma = el('p', 'modal__summary-line');
+            pFirma.appendChild(el('span', '', 'Firma del cliente'));
+            pFirma.appendChild(el('strong', '', 'Capturada'));
+            extra.appendChild(pFirma);
+          }
         }
         showModalStep('step-exito');
-        resetAfterTransfer();
+        if (isTransferCompleteSuccess(record)) {
+          resetAfterTransfer();
+        }
 
         if (!record.supabaseOk) {
           showValidation(
@@ -3608,9 +3950,21 @@
       }
       if (btnLlaveroOk) {
         btnLlaveroOk.addEventListener('click', function () {
-          finishTransfer();
+          openFirmaStep();
         });
       }
+      const btnFirmaLimpiar = document.getElementById('btn-firma-limpiar');
+      const btnFirmaConfirmar = document.getElementById('btn-firma-confirmar');
+      if (btnFirmaLimpiar) {
+        btnFirmaLimpiar.addEventListener('click', clearClienteFirma);
+      }
+      if (btnFirmaConfirmar) {
+        btnFirmaConfirmar.addEventListener('click', function () {
+          confirmFirmaAndCreate();
+        });
+      }
+      window.addEventListener('resize', onFirmaViewportChange);
+      window.addEventListener('orientationchange', onFirmaViewportChange);
       if (btnQr) {
         btnQr.addEventListener('click', function () {
           openQrScanner();
@@ -3648,7 +4002,7 @@
         const pedidoOpen = document.getElementById('box-pedido');
         if (!pedidoOpen || !pedidoOpen.classList.contains('is-open')) return [];
         const stops = Array.prototype.slice.call(inputs);
-        if (btnCargar) stops.push(btnCargar);
+        if (btnCargar && !btnCargar.disabled) stops.push(btnCargar);
         if (btnBorrar) stops.push(btnBorrar);
         return stops;
       }

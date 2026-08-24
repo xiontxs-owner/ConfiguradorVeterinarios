@@ -2032,7 +2032,22 @@ body.is-file-protocol .page-shell {
   color: inherit;
 }
 
-/* CARGAR CARRITO — siempre activo, acento dorado */
+.sidebar-actions .minimo-transfer {
+  margin: 0 0 0.15rem;
+  text-align: center;
+  font-family: var(--font);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.25;
+  color: var(--text-muted-on-dark);
+}
+
+.minimo-transfer[hidden] {
+  display: none !important;
+}
+
+/* CREAR TRANSFER — activo desde $1,000 MXN */
 .btn-cargar {
   display: inline-flex;
   align-items: center;
@@ -2076,6 +2091,21 @@ body.is-file-protocol .page-shell {
 .btn-cargar:focus-visible {
   outline: 2px solid #fff;
   outline-offset: 3px;
+}
+
+.btn-cargar:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.25);
+  box-shadow: none;
+  transform: none;
+}
+
+.btn-cargar:disabled:hover,
+.btn-cargar:disabled:active {
+  filter: grayscale(0.25);
+  transform: none;
+  box-shadow: none;
 }
 
 /* Borrar todo — rojo oscuro / medio / brillante */
@@ -2322,6 +2352,183 @@ body.modal-open {
   gap: 0.75rem;
 }
 
+.modal__panel--firma {
+  width: min(42rem, 100%);
+  max-height: min(94vh, 58rem);
+  padding: 1.1rem 1.15rem 1rem;
+  gap: 0.7rem;
+  overflow: hidden;
+}
+
+.modal__title--firma {
+  text-transform: none;
+  letter-spacing: 0.01em;
+  font-size: clamp(0.98rem, 2.4vw, 1.16rem);
+  line-height: 1.3;
+  flex-shrink: 0;
+}
+
+.firma-step:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  gap: 0.6rem;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.firma-legal {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  gap: 0.4rem;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 0.05rem 0.4rem 0.15rem 0.05rem;
+  text-align: left;
+  font-family: var(--font);
+  font-size: 0.84rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--text-on-dark);
+}
+
+.firma-legal p {
+  margin: 0;
+}
+
+.firma-legal ul {
+  margin: 0;
+  padding-left: 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.firma-legal li {
+  padding-left: 0.15rem;
+}
+
+.firma-legal__alert {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.firma-legal__decl-label {
+  margin-top: 0.15rem;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.firma-sign {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  flex-shrink: 0;
+}
+
+.firma-sign__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.firma-sign__label {
+  font-family: var(--font);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.firma-sign__hint {
+  font-family: var(--font);
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-muted-on-dark);
+}
+
+.firma-pad-frame {
+  position: relative;
+  width: 100%;
+  height: clamp(8.25rem, 18vh, 12rem);
+  background: #fff;
+  border: 1px dashed rgba(226, 152, 14, 0.72);
+  border-radius: 12px;
+  overflow: hidden;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  box-shadow: inset 0 0 0 1px rgba(1, 27, 43, 0.04);
+}
+
+.firma-pad-frame canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  -ms-touch-action: none;
+  cursor: crosshair;
+}
+
+.firma-error {
+  margin: 0;
+  font-family: var(--font);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #ff8a8a;
+  text-align: center;
+}
+
+.firma-error[hidden] {
+  display: none !important;
+}
+
+.firma-actions {
+  flex-shrink: 0;
+}
+
+.btn-modal--confirm:disabled,
+.btn-modal:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  filter: none;
+  box-shadow: none;
+}
+
+.btn-modal--confirm:disabled:hover,
+.btn-modal:disabled:hover {
+  filter: none;
+  transform: none;
+}
+
+@media (max-width: 800px) {
+  .modal__panel--firma {
+    width: 100%;
+    max-height: min(96vh, 62rem);
+    padding: 0.9rem 0.85rem 0.85rem;
+  }
+
+  .firma-legal {
+    font-size: 0.82rem;
+  }
+
+  .firma-pad-frame {
+    height: clamp(9.5rem, 22vh, 13.5rem);
+  }
+
+  .firma-sign__head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.15rem;
+  }
+}
+
 /* ---------- Responsive ---------- */
 
 @media (max-width: 800px) {
@@ -2491,6 +2698,11 @@ body.modal-open {
     gap: 0.32rem;
     margin: 0;
     min-height: 5.7rem;
+  }
+
+  .sidebar-actions .minimo-transfer {
+    margin: 0;
+    font-size: 0.64rem;
   }
 
   .sidebar-actions .btn-cargar,
