@@ -2163,6 +2163,32 @@
         return prefix + String(max + 1).padStart(3, '0');
       }
 
+      function nextFolioAfter(folio) {
+        const text = String(folio || '').trim();
+        const match = /^(TR-\d{8}-)(\d+)$/.exec(text);
+        if (match) {
+          const width = Math.max(match[2].length, 3);
+          const n = parseInt(match[2], 10) + 1;
+          return match[1] + String(n).padStart(width, '0');
+        }
+        return nextLocalFolio([{ folio: text }]);
+      }
+
+      function isDuplicateFolioError(error) {
+        if (!error) return false;
+        if (typeof error === 'string') {
+          return /duplicate key|unique constraint|already exists/i.test(error);
+        }
+        const code = String(error.code || error.status || '');
+        const msg = String(
+          error.message || error.details || error.hint || ''
+        );
+        return (
+          code === '23505' ||
+          /duplicate key|unique constraint|already exists/i.test(msg)
+        );
+      }
+
       function splitEmails(raw) {
         return String(raw || '')
           .split(';')
@@ -2699,7 +2725,15 @@
           let payload = row;
           for (let attempt = 0; attempt < 16; attempt++) {
             const { error } = await client.from('transfers').insert([payload]);
-            if (!error) return { ok: true };
+            if (!error) return { ok: true, folio: payload.folio || record.folio };
+            if (isDuplicateFolioError(error)) {
+              return {
+                ok: false,
+                duplicate: true,
+                error: error.message || 'El folio ya existe.',
+                code: error.code || '',
+              };
+            }
             const missing = /'([^']+)' column/.exec(error.message || '');
             if (missing && missing[1] && payload[missing[1]] !== undefined) {
               const next = {};
@@ -2725,15 +2759,49 @@
           const existing = await listLocalTransfers();
           record.folio = nextLocalFolio(existing);
         }
+
+        const maxAttempts = 5;
+        let lastError = '';
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          const remote = await saveTransferToSupabase(record);
+          if (remote.ok) {
+            if (remote.folio) record.folio = remote.folio;
+            record.supabaseOk = true;
+            record.supabaseError = '';
+            try {
+              await saveLocalTransfer(record);
+            } catch (err) {
+              /* la copia local es de respaldo */
+            }
+            return record;
+          }
+
+          lastError = remote.error || 'Error al guardar';
+          const canRetryFolio =
+            (remote.duplicate || isDuplicateFolioError(lastError)) &&
+            attempt < maxAttempts;
+          if (canRetryFolio) {
+            record.folio = nextFolioAfter(record.folio);
+            continue;
+          }
+
+          record.supabaseOk = false;
+          record.supabaseError = lastError;
+          try {
+            await saveLocalTransfer(record);
+          } catch (err) {
+            /* la copia local es de respaldo */
+          }
+          return record;
+        }
+
+        record.supabaseOk = false;
+        record.supabaseError = lastError || 'No se pudo guardar el transfer.';
         try {
           await saveLocalTransfer(record);
         } catch (err) {
           /* la copia local es de respaldo */
         }
-
-        const remote = await saveTransferToSupabase(record);
-        record.supabaseOk = remote.ok;
-        record.supabaseError = remote.ok ? '' : remote.error || 'Error al guardar';
         return record;
       }
 
