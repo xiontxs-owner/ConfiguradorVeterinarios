@@ -24,3 +24,11 @@ create policy "transfers_insert_anon"
   for insert
   to anon, authenticated
   with check (true);
+
+-- Permitir leer folios para asignar el siguiente sin choques.
+drop policy if exists "transfers_select_anon" on public.transfers;
+create policy "transfers_select_anon"
+  on public.transfers
+  for select
+  to anon, authenticated
+  using (true);

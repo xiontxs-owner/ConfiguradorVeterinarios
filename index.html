@@ -2712,6 +2712,23 @@
         return null;
       }
 
+      async function fetchRemoteFoliosForPrefix(prefix) {
+        try {
+          const client = await getSupabaseClient();
+          if (!client || !prefix) return [];
+          const { data, error } = await client
+            .from('transfers')
+            .select('folio')
+            .like('folio', prefix + '%')
+            .order('folio', { ascending: false })
+            .limit(50);
+          if (error || !data) return [];
+          return data;
+        } catch (err) {
+          return [];
+        }
+      }
+
       async function saveTransferToSupabase(record) {
         try {
           const client = await getSupabaseClient();
@@ -2723,16 +2740,14 @@
           }
           const row = mapRecordToSupabaseRow(record);
           let payload = row;
-          for (let attempt = 0; attempt < 16; attempt++) {
+          for (let attempt = 0; attempt < 64; attempt++) {
             const { error } = await client.from('transfers').insert([payload]);
             if (!error) return { ok: true, folio: payload.folio || record.folio };
             if (isDuplicateFolioError(error)) {
-              return {
-                ok: false,
-                duplicate: true,
-                error: error.message || 'El folio ya existe.',
-                code: error.code || '',
-              };
+              const bumped = nextFolioAfter(payload.folio);
+              payload = Object.assign({}, payload, { folio: bumped });
+              record.folio = bumped;
+              continue;
             }
             const missing = /'([^']+)' column/.exec(error.message || '');
             if (missing && missing[1] && payload[missing[1]] !== undefined) {
@@ -2745,7 +2760,11 @@
             }
             return { ok: false, error: error.message || 'Error de Supabase' };
           }
-          return { ok: false, error: 'No se pudo guardar el transfer en Supabase.' };
+          return {
+            ok: false,
+            duplicate: true,
+            error: 'No se pudo asignar un folio libre en Supabase.',
+          };
         } catch (err) {
           return {
             ok: false,
@@ -2757,10 +2776,12 @@
       async function persistTransfer(record) {
         if (!record.folio) {
           const existing = await listLocalTransfers();
-          record.folio = nextLocalFolio(existing);
+          const prefix = 'TR-' + folioDateStamp(new Date()) + '-';
+          const remote = await fetchRemoteFoliosForPrefix(prefix);
+          record.folio = nextLocalFolio(existing.concat(remote));
         }
 
-        const maxAttempts = 5;
+        const maxAttempts = 8;
         let lastError = '';
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
           const remote = await saveTransferToSupabase(record);
